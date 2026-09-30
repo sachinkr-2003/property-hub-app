@@ -108,13 +108,15 @@ class ApiService {
   static Future<Map<String, dynamic>?> phoneLogin(String mobile, [String? otp]) async {
     try {
       final uri = Uri.parse('$baseUrl/auth/phone-login');
+      final Map<String, dynamic> payload = {'mobile': mobile};
+      if (otp != null && otp.isNotEmpty) {
+        payload['otp'] = otp;
+      }
+
       final response = await http.post(
         uri,
         headers: _headers,
-        body: json.encode({
-          'mobile': mobile,
-          if (otp != null) 'otp': otp,
-        }),
+        body: json.encode(payload),
       ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
