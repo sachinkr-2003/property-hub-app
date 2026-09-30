@@ -113,13 +113,12 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Owner Subscription Plan
-  String ownerSubscriptionPlan = 'Basic Free'; // 'Basic Free', 'Premium Owner', 'Pro Real Estate'
+  // Owner Subscription Plan: 100% Free Forever
+  String ownerSubscriptionPlan = '100% Free Lifetime';
   DateTime? subscriptionExpiry;
 
   void upgradeSubscription(String planName) {
-    ownerSubscriptionPlan = planName;
-    subscriptionExpiry = DateTime.now().add(const Duration(days: 30));
+    ownerSubscriptionPlan = '100% Free Lifetime';
     notifyListeners();
   }
 

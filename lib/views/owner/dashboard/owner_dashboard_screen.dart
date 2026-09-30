@@ -275,10 +275,10 @@ class OwnerDashboardScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.workspace_premium_rounded, color: Color(0xFFD97706), size: 28),
+                            const Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 28),
                             const SizedBox(height: 12),
                             Text(
-                              'Listing Plans',
+                              'Free Membership',
                               style: GoogleFonts.plusJakartaSans(
                                 color: AppTheme.textPrimary,
                                 fontWeight: FontWeight.w700,
@@ -286,10 +286,11 @@ class OwnerDashboardScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Upgrade for 10x leads',
+                              '100% Free Forever',
                               style: GoogleFonts.plusJakartaSans(
-                                color: AppTheme.textSecondary,
+                                color: Color(0xFF059669),
                                 fontSize: 11,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
