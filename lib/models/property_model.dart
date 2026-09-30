@@ -62,4 +62,60 @@ class Property {
     }
     return '₹ ${price.toStringAsFixed(0)}$priceUnit';
   }
+
+  factory Property.fromJson(Map<String, dynamic> json) {
+    return Property(
+      id: json['customId']?.toString() ?? json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'Flat',
+      listingType: json['listingType']?.toString() ?? 'Rent',
+      price: (json['price'] is num) ? (json['price'] as num).toDouble() : double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      priceUnit: json['priceUnit']?.toString() ?? '/month',
+      deposit: json['deposit'] != null ? (json['deposit'] is num ? (json['deposit'] as num).toDouble() : double.tryParse(json['deposit'].toString())) : null,
+      bhk: (json['bhk'] is num) ? (json['bhk'] as num).toInt() : int.tryParse(json['bhk']?.toString() ?? '1') ?? 1,
+      areaSqFt: (json['areaSqFt'] is num) ? (json['areaSqFt'] as num).toInt() : int.tryParse(json['areaSqFt']?.toString() ?? '800') ?? 800,
+      address: json['address']?.toString() ?? '',
+      locality: json['locality']?.toString() ?? '',
+      city: json['city']?.toString() ?? 'Lucknow',
+      images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      isVerified: json['isVerified'] == true,
+      ownerName: json['ownerName']?.toString() ?? 'Owner',
+      ownerPhone: json['ownerPhone']?.toString() ?? '',
+      ownerRole: json['ownerRole']?.toString() ?? 'Direct Owner',
+      amenities: (json['amenities'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      furnishing: json['furnishing']?.toString() ?? 'Semi-Furnished',
+      targetTenant: json['targetTenant']?.toString() ?? 'Bachelors & Working Pros',
+      description: json['description']?.toString() ?? '',
+      postedAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now() : DateTime.now(),
+      isFavorite: false,
+      status: json['status']?.toString() ?? 'Active',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'customId': id,
+      'title': title,
+      'type': type,
+      'listingType': listingType,
+      'price': price,
+      'priceUnit': priceUnit,
+      'deposit': deposit,
+      'bhk': bhk,
+      'areaSqFt': areaSqFt,
+      'address': address,
+      'locality': locality,
+      'city': city,
+      'images': images,
+      'isVerified': isVerified,
+      'ownerName': ownerName,
+      'ownerPhone': ownerPhone,
+      'ownerRole': ownerRole,
+      'amenities': amenities,
+      'furnishing': furnishing,
+      'targetTenant': targetTenant,
+      'description': description,
+      'status': status,
+    };
+  }
 }

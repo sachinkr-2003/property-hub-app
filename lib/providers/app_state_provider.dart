@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
+import '../core/services/api_service.dart';
 import '../models/property_model.dart';
 import '../models/roommate_model.dart';
 import '../models/service_model.dart';
@@ -13,6 +14,7 @@ enum AppRole { user, owner }
 class AppStateProvider extends ChangeNotifier {
   AppStateProvider() {
     _loadPersistedState();
+    loadLivePropertiesFromBackend();
   }
 
   void _loadPersistedState() {
@@ -268,7 +270,38 @@ class AppStateProvider extends ChangeNotifier {
     ),
   ];
 
+  bool _isLoadingProperties = false;
+  bool get isLoadingProperties => _isLoadingProperties;
+
   List<Property> get properties => _properties;
+
+  /// Fetch live properties directly from MongoDB backend
+  Future<void> loadLivePropertiesFromBackend() async {
+    _isLoadingProperties = true;
+    notifyListeners();
+
+    try {
+      final liveProps = await ApiService.fetchProperties();
+      if (liveProps.isNotEmpty) {
+        _properties.clear();
+        _properties.addAll(liveProps);
+
+        // Re-apply saved favorites
+        final savedFavorites = StorageService.getFavorites();
+        for (final prop in _properties) {
+          if (savedFavorites.contains(prop.id)) {
+            prop.isFavorite = true;
+          }
+        }
+        debugPrint('[AppStateProvider] Loaded ${liveProps.length} properties live from MongoDB');
+      }
+    } catch (e) {
+      debugPrint('[AppStateProvider] Fallback to default properties: $e');
+    } finally {
+      _isLoadingProperties = false;
+      notifyListeners();
+    }
+  }
 
   List<Property> get filteredProperties {
     return _properties.where((p) {
@@ -289,7 +322,7 @@ class AppStateProvider extends ChangeNotifier {
       _properties.where((p) => p.isFavorite).toList();
 
   List<Property> get ownerProperties =>
-      _properties.where((p) => p.ownerName == 'Rajesh Kumar').toList();
+      _properties.where((p) => p.ownerName == 'Rajesh Kumar' || p.ownerName == 'Vikramaditya Roy').toList();
 
   void toggleFavorite(String propertyId) {
     final index = _properties.indexWhere((p) => p.id == propertyId);
@@ -305,6 +338,13 @@ class AppStateProvider extends ChangeNotifier {
   void addProperty(Property property) {
     _properties.insert(0, property);
     notifyListeners();
+
+    // Asynchronously save to MongoDB in background
+    ApiService.createProperty(property.toJson()).then((created) {
+      if (created != null) {
+        debugPrint('[AppStateProvider] Successfully created property in MongoDB: ${created.id}');
+      }
+    });
   }
 
   void togglePropertyStatus(String propertyId) {
@@ -789,12 +829,30 @@ class AppStateProvider extends ChangeNotifier {
   bool isPhotoUploaded = true;
   String kycStatus = 'Verified'; // Verified, Pending
 
-  void submitKyc() {
+  void submitKyc({
+    String name = 'Rajesh Kumar',
+    String mobile = '+91 98765 43210',
+    String email = 'rajesh.owner@propertyhub.in',
+    String aadhaar = '4521-8890-3412',
+    String pan = 'ABCDE1234F',
+    String registry = 'Indira Nagar Registry Deed',
+  }) {
     isAadhaarUploaded = true;
     isPanUploaded = true;
     isPhotoUploaded = true;
-    kycStatus = 'Verified';
+    kycStatus = 'Pending';
     notifyListeners();
+
+    ApiService.submitKyc(
+      ownerName: name,
+      mobile: mobile,
+      email: email,
+      aadhaarNumber: aadhaar,
+      panNumber: pan,
+      registryDetails: registry,
+    ).then((success) {
+      debugPrint('[AppStateProvider] KYC submitted to backend: $success');
+    });
   }
 
   // Visit Bookings (Digital Visit Passes)

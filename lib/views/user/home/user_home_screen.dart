@@ -28,7 +28,7 @@ class UserHomeScreen extends StatelessWidget {
         child: RefreshIndicator(
           color: AppTheme.primary,
           onRefresh: () async {
-            await Future.delayed(const Duration(milliseconds: 500));
+            await state.loadLivePropertiesFromBackend();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
