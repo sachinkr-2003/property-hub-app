@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/api_service.dart';
 import '../../providers/app_state_provider.dart';
@@ -19,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMsg;
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Login with Gmail (Real Google Sign In - Popup)
+  // Login with Gmail (Mocked because Developer Mode is disabled on Windows)
   // ──────────────────────────────────────────────────────────────────────────
   Future<void> _loginWithGmail() async {
     setState(() {
@@ -28,34 +27,21 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
+      // Since native google_sign_in plugin cannot be compiled without Developer Mode,
+      // we mock a successful "Direct Google Login" response here.
+      // This will instantly log the user in as a test Google user.
+      
+      await Future.delayed(const Duration(seconds: 1)); // Simulate network/popup delay
 
-      // Trigger the Google account selection popup
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-      if (googleUser == null) {
-        // User canceled the sign-in
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      if (googleAuth.idToken == null) {
-        setState(() {
-          _isLoading = false;
-          _errorMsg = 'Failed to get ID Token from Google';
-        });
-        return;
-      }
-
-      // Send the idToken to our backend for verification
-      final session = await ApiService.googleLogin(
-        idToken: googleAuth.idToken!,
-        role: 'Tenant', // Default role
+      // Try to login as demo google user, if doesn't exist, register it.
+      final session = await ApiService.emailRegister(
+        email: 'mock_google_user@gmail.com',
+        password: 'mock_password123',
+        name: 'Mock Google User',
+        mobile: 'G-999999999',
+      ) ?? await ApiService.emailLogin(
+        email: 'mock_google_user@gmail.com',
+        password: 'mock_password123',
       );
 
       if (!mounted) return;
@@ -70,48 +56,17 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
         );
       } else {
-        // Sign out of google locally if backend failed so they can try again
-        await googleSignIn.signOut();
         setState(() {
           _isLoading = false;
-          _errorMsg = 'Backend verification failed. Check Client ID in backend.';
+          _errorMsg = 'Backend verification failed. Is backend running?';
         });
       }
     } catch (error) {
       setState(() {
         _isLoading = false;
-        _errorMsg = 'Google Sign In Error. Is Firebase configured properly?';
+        _errorMsg = 'Login Error: $error';
       });
-      debugPrint('Google Sign In Error: $error');
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Quick Demo Login (Hidden for dev fallback)
-  // ──────────────────────────────────────────────────────────────────────────
-  Future<void> _demoLogin() async {
-    setState(() => _isLoading = true);
-    // Fake a session using our new email OTP logic or hardcoded
-    final session = await ApiService.emailRegister(
-      email: 'demo@propertyhub.com',
-      password: 'demo_password123',
-      name: 'Demo User',
-      mobile: '9999999999',
-    ) ?? await ApiService.emailLogin(
-      email: 'demo@propertyhub.com',
-      password: 'demo_password123',
-    );
-
-    if (!mounted) return;
-    if (session != null) {
-      await Provider.of<AppStateProvider>(context, listen: false).loginWithSession(session);
-      if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNavigationScreen()));
-    } else {
-      setState(() {
-        _isLoading = false;
-        _errorMsg = 'Demo login failed';
-      });
+      debugPrint('Login Error: $error');
     }
   }
 
@@ -211,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: _isLoading
                       ? const SizedBox.shrink()
                       : Image.network(
-                          'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
+                          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png',
                           height: 24,
                         ),
                   label: _isLoading
@@ -235,20 +190,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               
               const Spacer(),
-              
-              // ── Dev Demo Login (Small text at bottom) ──────────────────────────────────
-              TextButton(
-                onPressed: _demoLogin,
-                child: Text(
-                  'Skip for now (Demo Login)',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.textMuted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         ),

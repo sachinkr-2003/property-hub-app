@@ -14,7 +14,7 @@ import '../../models/chat_model.dart';
 class ApiService {
   // Live Render Cloud Backend URL (and localhost fallback)
   static const String liveCloudUrl = 'https://property-hub-backend-j0ea.onrender.com';
-  static const bool useLiveCloud = false;
+  static const bool useLiveCloud = true;
 
   static String get serverRootUrl {
     if (useLiveCloud) {
