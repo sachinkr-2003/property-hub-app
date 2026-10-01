@@ -14,42 +14,78 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  bool _isLoginMode = true;
   bool _isLoading = false;
   String? _errorMsg;
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Login with Gmail (Mocked because Developer Mode is disabled on Windows)
-  // ──────────────────────────────────────────────────────────────────────────
-  Future<void> _loginWithGmail() async {
+  // Controllers
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _mobileController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nameController.dispose();
+    _mobileController.dispose();
+    super.dispose();
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _isLoginMode = !_isLoginMode;
+      _errorMsg = null;
+    });
+  }
+
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+    final mobile = _mobileController.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _errorMsg = 'Please enter a valid email address');
+      return;
+    }
+    if (password.length < 6) {
+      setState(() => _errorMsg = 'Password must be at least 6 characters');
+      return;
+    }
+
+    if (!_isLoginMode) {
+      if (name.isEmpty) {
+        setState(() => _errorMsg = 'Please enter your name');
+        return;
+      }
+      if (mobile.length < 10) {
+        setState(() => _errorMsg = 'Please enter a valid mobile number');
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
       _errorMsg = null;
     });
 
     try {
-      // Since native google_sign_in plugin cannot be compiled without Developer Mode,
-      // we mock a successful "Direct Google Login" response here.
-      // This will instantly log the user in as a test Google user.
-      
-      await Future.delayed(const Duration(seconds: 1)); // Simulate network/popup delay
-
-      // Try to login as demo google user, if doesn't exist, register it.
-      final session = await ApiService.emailRegister(
-        email: 'mock_google_user@gmail.com',
-        password: 'mock_password123',
-        name: 'Mock Google User',
-        mobile: 'G-999999999',
-      ) ?? await ApiService.emailLogin(
-        email: 'mock_google_user@gmail.com',
-        password: 'mock_password123',
-      );
+      final session = _isLoginMode
+          ? await ApiService.emailLogin(email: email, password: password)
+          : await ApiService.emailRegister(
+              email: email,
+              password: password,
+              name: name,
+              mobile: mobile,
+            );
 
       if (!mounted) return;
 
       if (session != null) {
         await Provider.of<AppStateProvider>(context, listen: false)
             .loginWithSession(session);
-        
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -58,141 +94,229 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         setState(() {
           _isLoading = false;
-          _errorMsg = 'Backend verification failed. Is backend running?';
+          _errorMsg = _isLoginMode 
+              ? 'Invalid email or password' 
+              : 'Registration failed. Email might already exist.';
         });
       }
-    } catch (error) {
+    } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMsg = 'Login Error: $error';
+        _errorMsg = 'Something went wrong: $e';
       });
-      debugPrint('Login Error: $error');
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Build
-  // ──────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Spacer(),
               // ── Logo ──────────────────────────────────────────────────────
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight,
-                  borderRadius: BorderRadius.circular(20),
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.home_work_rounded, size: 42, color: AppTheme.primary),
+                  ),
                 ),
-                child: const Center(
-                  child: Icon(Icons.home_work_rounded, size: 48, color: AppTheme.primary),
+              ),
+              const SizedBox(height: 24),
+
+              Center(
+                child: Text(
+                  _isLoginMode ? 'Welcome Back!' : 'Create Account',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  _isLoginMode
+                      ? 'Login to access your properties'
+                      : 'Join Property Hub today',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
 
-              Text(
-                'Property Hub',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textPrimary,
+              // ── Forms ─────────────────────────────────────────────────────
+              if (!_isLoginMode) ...[
+                _buildLabel('Full Name'),
+                _buildTextField(
+                  controller: _nameController,
+                  icon: Icons.person_outline_rounded,
+                  hint: 'Enter your name',
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Find your perfect home easily.\nLogin directly with your Google account.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  color: AppTheme.textSecondary,
-                  height: 1.5,
+                const SizedBox(height: 16),
+                _buildLabel('Mobile Number'),
+                _buildTextField(
+                  controller: _mobileController,
+                  icon: Icons.phone_android_rounded,
+                  hint: 'Enter your mobile number',
+                  keyboardType: TextInputType.phone,
                 ),
+                const SizedBox(height: 16),
+              ],
+
+              _buildLabel('Email Address'),
+              _buildTextField(
+                controller: _emailController,
+                icon: Icons.email_outlined,
+                hint: 'Enter your email',
+                keyboardType: TextInputType.emailAddress,
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 16),
+
+              _buildLabel('Password'),
+              _buildTextField(
+                controller: _passwordController,
+                icon: Icons.lock_outline_rounded,
+                hint: 'Enter your password',
+                obscureText: true,
+              ),
 
               // ── Error Message ────────────────────────────────────────────
               if (_errorMsg != null) ...[
+                const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 20),
-                      const SizedBox(width: 12),
+                      const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 16),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMsg!,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             color: const Color(0xFFB91C1C),
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
               ],
 
-              // ── Direct Gmail Login Button ───────────────────────────────────────────────
+              const SizedBox(height: 32),
+
+              // ── Submit Button ──────────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _loginWithGmail,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
-                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  icon: _isLoading
-                      ? const SizedBox.shrink()
-                      : Image.network(
-                          'https://img.icons8.com/color/48/000000/google-logo.png',
-                          height: 24,
-                        ),
-                  label: _isLoading
+                  child: _isLoading
                       ? const SizedBox(
-                          width: 24,
-                          height: 24,
+                          width: 22,
+                          height: 22,
                           child: CircularProgressIndicator(
-                            color: AppTheme.primary,
-                            strokeWidth: 3,
+                            color: Colors.white,
+                            strokeWidth: 2.5,
                           ),
                         )
                       : Text(
-                          'Continue with Google',
+                          _isLoginMode ? 'Login' : 'Sign Up',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
                           ),
                         ),
                 ),
               ),
-              
-              const Spacer(),
+
+              const SizedBox(height: 24),
+
+              // ── Toggle Login / Sign Up ─────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _isLoginMode ? "Don't have an account? " : "Already have an account? ",
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _toggleMode,
+                    child: Text(
+                      _isLoginMode ? 'Sign Up' : 'Login',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppTheme.primary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        text,
+        style: GoogleFonts.plusJakartaSans(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: AppTheme.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      style: GoogleFonts.plusJakartaSans(fontSize: 15),
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: AppTheme.textMuted, size: 20),
+        hintText: hint,
       ),
     );
   }
