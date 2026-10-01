@@ -166,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: _isLoading
                       ? const SizedBox.shrink()
                       : Image.network(
-                          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png',
+                          'https://img.icons8.com/color/48/000000/google-logo.png',
                           height: 24,
                         ),
                   label: _isLoading
