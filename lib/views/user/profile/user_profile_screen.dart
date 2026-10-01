@@ -1,3 +1,4 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -11,8 +12,47 @@ import '../compare/property_compare_screen.dart';
 import '../calculators/financial_calculator_screen.dart';
 import '../agreement/rent_agreement_generator_screen.dart';
 
-class UserProfileScreen extends StatelessWidget {
+class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
+
+  @override
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends State<UserProfileScreen> {
+  bool _isUploading = false;
+
+  Future<void> _pickAndUploadImage(AppStateProvider state) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+      if (pickedFile == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      await state.uploadProfileImage(pickedFile.path);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile image updated successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update image: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,36 +84,44 @@ class UserProfileScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.primary, width: 2),
-                    ),
-                    child: ClipOval(
-                      child: state.currentUser?.hasProfileImage == true
-                          ? AppImage(
-                              path: state.userProfileImage,
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: AppTheme.primaryLight,
-                              child: Center(
-                                child: Text(
-                                  state.userName.isNotEmpty
-                                      ? state.userName[0].toUpperCase()
-                                      : 'U',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.primary,
-                                  ),
-                                ),
-                              ),
-                            ),
+                  GestureDetector(
+                    onTap: () => _pickAndUploadImage(state),
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.primary, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: _isUploading
+                            ? const Padding(
+                                padding: EdgeInsets.all(14.0),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                              )
+                            : (state.currentUser?.hasProfileImage == true
+                                ? AppImage(
+                                    path: state.userProfileImage,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    color: AppTheme.primaryLight,
+                                    child: Center(
+                                      child: Text(
+                                        state.userName.isNotEmpty
+                                            ? state.userName[0].toUpperCase()
+                                            : 'U',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  )),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -122,7 +170,7 @@ class UserProfileScreen extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, color: AppTheme.primary, size: 20),
-                    onPressed: () {},
+                    onPressed: () => _pickAndUploadImage(state),
                   ),
                 ],
               ),

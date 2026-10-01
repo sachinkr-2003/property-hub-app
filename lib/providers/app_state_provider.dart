@@ -122,6 +122,17 @@ class AppStateProvider extends ChangeNotifier {
     );
   }
 
+  /// Uploads and updates the user's profile image
+  Future<void> uploadProfileImage(String imagePath) async {
+    if (_currentUser == null) return;
+    final uploadedUrl = await ApiService.uploadSingleFile(imagePath);
+    if (uploadedUrl != null) {
+      await updateUserProfile(profileImage: uploadedUrl);
+    } else {
+      throw Exception('Failed to upload image');
+    }
+  }
+
   void logout() {
     _isLoggedIn = false;
     _currentUser = null;
