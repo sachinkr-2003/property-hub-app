@@ -17,6 +17,9 @@ class OwnerKycScreen extends StatelessWidget {
         TextEditingController(text: 'XXXX-XXXX-8921');
     final panController = TextEditingController(text: 'ABCDE1234F');
     String? capturedPhotoPath;
+    String? pickedAadhaarPath;
+    String? pickedPanPath;
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -41,6 +44,28 @@ class OwnerKycScreen extends StatelessWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Failed to capture photo: $e')),
+                  );
+                }
+              }
+            }
+
+            Future<void> pickDoc(String docType) async {
+              try {
+                final picker = ImagePicker();
+                final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                if (picked != null) {
+                  setModalState(() {
+                    if (docType == 'aadhaar') {
+                      pickedAadhaarPath = picked.path;
+                    } else {
+                      pickedPanPath = picked.path;
+                    }
+                  });
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to pick document: $e')),
                   );
                 }
               }
@@ -86,7 +111,7 @@ class OwnerKycScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'Aadhaar Number',
+                      'Aadhaar Number & Photo Document',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -95,15 +120,31 @@ class OwnerKycScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     TextField(
                       controller: aadhaarController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Enter 12-digit Aadhaar number',
                         contentPadding:
-                            EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            pickedAadhaarPath != null ? Icons.check_circle : Icons.attach_file_rounded,
+                            color: pickedAadhaarPath != null ? AppTheme.verifiedGreen : AppTheme.primary,
+                          ),
+                          tooltip: 'Upload Aadhaar Scan / Photo',
+                          onPressed: () => pickDoc('aadhaar'),
+                        ),
                       ),
                     ),
+                    if (pickedAadhaarPath != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '✓ Aadhaar document file attached',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.verifiedGreen, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     const SizedBox(height: 14),
                     Text(
-                      'PAN Card Number',
+                      'PAN Card Number & Photo Document',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -112,12 +153,28 @@ class OwnerKycScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     TextField(
                       controller: panController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Enter 10-character PAN number',
                         contentPadding:
-                            EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            pickedPanPath != null ? Icons.check_circle : Icons.attach_file_rounded,
+                            color: pickedPanPath != null ? AppTheme.verifiedGreen : AppTheme.primary,
+                          ),
+                          tooltip: 'Upload PAN Scan / Photo',
+                          onPressed: () => pickDoc('pan'),
+                        ),
                       ),
                     ),
+                    if (pickedPanPath != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '✓ PAN card file attached',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.verifiedGreen, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     const SizedBox(height: 18),
 
                     // Live Selfie / Photo Verification box
@@ -221,19 +278,38 @@ class OwnerKycScreen extends StatelessWidget {
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: () {
-                          state.submitKyc();
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'KYC Documents submitted and authenticated!',
-                              ),
-                              backgroundColor: AppTheme.primary,
-                            ),
-                          );
-                        },
-                        child: const Text('Submit & Authenticate'),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                setModalState(() => isSubmitting = true);
+                                await state.submitKyc(
+                                  name: state.userName,
+                                  mobile: state.userMobile.isNotEmpty ? state.userMobile : '',
+                                  aadhaar: aadhaarController.text.trim(),
+                                  pan: panController.text.trim(),
+                                  aadhaarFilePath: pickedAadhaarPath,
+                                  panFilePath: pickedPanPath,
+                                  selfieFilePath: capturedPhotoPath,
+                                );
+                                if (ctx.mounted) {
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'KYC Documents uploaded and submitted for live verification!',
+                                      ),
+                                      backgroundColor: AppTheme.primary,
+                                    ),
+                                  );
+                                }
+                              },
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text('Submit & Authenticate'),
                       ),
                     ),
                   ],

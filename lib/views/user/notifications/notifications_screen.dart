@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../models/notification_item_model.dart';
 import '../../../providers/app_state_provider.dart';
 import '../chat/chat_screen.dart';
 import '../visits/my_visits_screen.dart';
@@ -15,80 +16,85 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final List<Map<String, dynamic>> _notifications = [
-    {
-      'id': 'notif-1',
-      'type': 'kyc',
-      'title': 'Property Verification Approved',
-      'subtitle': 'Your 3 BHK Flat in Indira Nagar has been verified and marked genuine.',
-      'time': '10 mins ago',
-      'icon': Icons.verified_user_rounded,
-      'color': AppTheme.verifiedGreen,
-    },
-    {
-      'id': 'notif-2',
-      'type': 'chat',
-      'title': 'New Message from Owner',
-      'subtitle': 'Rohit Sharma: "Yes, it is available. Would you like to visit?"',
-      'time': '35 mins ago',
-      'icon': Icons.chat_bubble_rounded,
-      'color': AppTheme.primary,
-    },
-    {
-      'id': 'notif-3',
-      'type': 'visit',
-      'title': 'Visit Request Confirmed',
-      'subtitle': 'Visit confirmed for tomorrow at 5:00 PM for Indira Nagar flat.',
-      'time': '2 hours ago',
-      'icon': Icons.calendar_month_rounded,
-      'color': AppTheme.infoBlue,
-    },
-    {
-      'id': 'notif-4',
-      'type': 'service',
-      'title': 'Tiffin Service Booked',
-      'subtitle': 'Your monthly subscription has started. Lunch delivery arrives at 1:00 PM.',
-      'time': 'Yesterday',
-      'icon': Icons.restaurant_rounded,
-      'color': const Color(0xFFF97316),
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = Provider.of<AppStateProvider>(context, listen: false);
+      state.loadLiveNotificationsFromBackend();
+    });
+  }
 
-  void _handleNotificationTap(Map<String, dynamic> n) {
-    final type = n['type'] as String?;
-    switch (type) {
-      case 'chat':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ChatListScreen()),
-        );
-        break;
-      case 'visit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MyVisitsScreen()),
-        );
-        break;
-      case 'kyc':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const OwnerKycScreen()),
-        );
-        break;
-      case 'service':
-        final state = Provider.of<AppStateProvider>(context, listen: false);
-        state.setUserNavIndex(2); // Services tab
-        Navigator.pop(context);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(n['title'] as String)),
-        );
+  void _handleNotificationTap(NotificationItem n, AppStateProvider state) {
+    state.markNotificationAsRead(n.id);
+
+    final type = n.type.toLowerCase();
+    final link = n.deepLink.toLowerCase();
+
+    if (type == 'chat' || link.contains('chat')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ChatListScreen()),
+      );
+    } else if (type == 'visit' || link.contains('visit')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyVisitsScreen()),
+      );
+    } else if (type == 'kyc' || link.contains('kyc')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const OwnerKycScreen()),
+      );
+    } else if (type == 'service' || link.contains('service')) {
+      state.setUserNavIndex(2); // Services tab
+      Navigator.pop(context);
+    } else {
+      // General Broadcast / Detail alert
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(n.icon, color: n.color, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  n.title,
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                n.message,
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppTheme.textPrimary, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Received: ${n.timeAgo}',
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textMuted),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Dismiss'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
-  void _clearAllNotifications() {
-    if (_notifications.isEmpty) return;
+  void _clearAllNotifications(AppStateProvider state) {
+    if (state.notifications.isEmpty) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -98,7 +104,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 16),
         ),
         content: Text(
-          'Are you sure you want to dismiss all current notifications?',
+          'Are you sure you want to dismiss all current notifications from your feed?',
           style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
         ),
         actions: [
@@ -110,9 +116,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
             onPressed: () {
               Navigator.pop(ctx);
-              setState(() {
-                _notifications.clear();
-              });
+              state.clearAllNotifications();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('All notifications cleared')),
               );
@@ -126,23 +130,47 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = Provider.of<AppStateProvider>(context);
+    final notifications = state.notifications;
+    final unreadCount = state.unreadNotificationsCount;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(
-          'Notifications',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Notifications',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
+            if (unreadCount > 0)
+              Text(
+                '$unreadCount unread notification${unreadCount > 1 ? 's' : ''}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                  color: AppTheme.primary,
+                ),
+              ),
+          ],
         ),
         actions: [
-          if (_notifications.isNotEmpty)
+          if (unreadCount > 0)
+            IconButton(
+              tooltip: 'Mark all as read',
+              icon: const Icon(Icons.done_all_rounded, size: 20, color: AppTheme.primary),
+              onPressed: () => state.markAllNotificationsAsRead(),
+            ),
+          if (notifications.isNotEmpty)
             TextButton.icon(
-              onPressed: _clearAllNotifications,
+              onPressed: () => _clearAllNotifications(state),
               icon: const Icon(Icons.clear_all_rounded, size: 18, color: AppTheme.errorRed),
               label: Text(
-                'Clear All',
+                'Clear',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -153,177 +181,182 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: SafeArea(
-        child: _notifications.isEmpty
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.notifications_off_outlined,
-                          size: 48,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'All Caught Up!',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'You have no pending notifications. Inquiries and visit updates will appear here.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: AppTheme.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Back to Home'),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: _notifications.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final n = _notifications[index];
-                  final id = n['id'] as String;
-
-                  return Dismissible(
-                    key: Key(id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: AppTheme.errorRed.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorRed),
-                    ),
-                    onDismissed: (_) {
-                      setState(() {
-                        _notifications.removeAt(index);
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${n['title']} dismissed'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    child: InkWell(
-                      onTap: () => _handleNotificationTap(n),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+        child: RefreshIndicator(
+          onRefresh: () => state.loadLiveNotificationsFromBackend(),
+          child: state.isLoadingNotifications && notifications.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : notifications.isEmpty
+                  ? Center(
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(22),
+                              decoration: const BoxDecoration(
+                                color: AppTheme.surfaceColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.notifications_off_outlined,
+                                size: 48,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'All Caught Up!',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'You have no pending notifications. Inquiries, KYC updates, and announcements will appear here.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Back to Home'),
                             ),
                           ],
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: (n['color'] as Color).withOpacity(0.12),
-                                shape: BoxShape.circle,
+                      ),
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      itemCount: notifications.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final n = notifications[index];
+
+                        return InkWell(
+                          onTap: () => _handleNotificationTap(n, state),
+                          borderRadius: BorderRadius.circular(16),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: n.isRead ? Colors.white : const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: n.isRead ? const Color(0xFFE2E8F0) : const Color(0xFFBBF7D0),
+                                width: n.isRead ? 1 : 1.5,
                               ),
-                              child: Icon(n['icon'] as IconData, color: n['color'] as Color, size: 22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.02),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          n['title'] as String,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                            color: AppTheme.textPrimary,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Stack(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: n.color.withValues(alpha: 0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(n.icon, color: n.color, size: 22),
+                                    ),
+                                    if (!n.isRead)
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: Container(
+                                          width: 9,
+                                          height: 9,
+                                          decoration: const BoxDecoration(
+                                            color: AppTheme.primary,
+                                            shape: BoxShape.circle,
                                           ),
                                         ),
                                       ),
-                                      Text(
-                                        n['time'] as String,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 10,
-                                          color: AppTheme.textMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    n['subtitle'] as String,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
+                                  ],
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              n.title,
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontWeight: n.isRead ? FontWeight.w600 : FontWeight.w800,
+                                                fontSize: 13,
+                                                color: AppTheme.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            n.timeAgo,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 11,
+                                              color: n.isRead ? AppTheme.textMuted : AppTheme.primary,
+                                              fontWeight: n.isRead ? FontWeight.normal : FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
                                       Text(
-                                        'Tap to view details',
+                                        n.message,
                                         style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.primary,
+                                          fontSize: 12,
+                                          color: AppTheme.textSecondary,
+                                          height: 1.4,
                                         ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        Icons.arrow_forward_rounded,
-                                        size: 12,
-                                        color: AppTheme.primary,
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Tap to view details',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Icon(
+                                            Icons.arrow_forward_rounded,
+                                            size: 12,
+                                            color: AppTheme.primary,
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
+        ),
       ),
     );
   }

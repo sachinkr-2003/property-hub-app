@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/api_service.dart';
 import '../../../core/utils/launcher_utils.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../models/used_item_model.dart';
@@ -473,14 +474,18 @@ class UsedItemsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           final price = double.tryParse(priceController.text) ?? 1500;
-                          final finalImage = pickedImagePath ??
-                              'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80';
+
+                          // Upload image to backend if picked
+                          String finalImage = pickedImagePath != null
+                              ? (await ApiService.uploadSingleFile(pickedImagePath!) ??
+                                  pickedImagePath!)
+                              : 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80';
+
                           state.addUsedItem(
                             UsedItem(
                               id: 'item-${DateTime.now().millisecondsSinceEpoch}',
@@ -491,18 +496,20 @@ class UsedItemsScreen extends StatelessWidget {
                               imageUrl: finalImage,
                               location: locationController.text.isNotEmpty ? locationController.text : 'Indira Nagar, Lucknow',
                               sellerName: 'Sachin (You)',
-                              sellerPhone: '+91 98765 43210',
+                              sellerPhone: state.userPhone.isNotEmpty ? state.userPhone : '+91 98765 43210',
                               description: 'Clean and good condition',
                               postedAt: DateTime.now(),
                             ),
                           );
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Used Item listed for bachelors successfully!'),
-                              backgroundColor: AppTheme.primary,
-                            ),
-                          );
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Used Item listed for bachelors successfully!'),
+                                backgroundColor: AppTheme.primary,
+                              ),
+                            );
+                          }
                         },
                         child: const Text('Post Now Free'),
                       ),

@@ -50,12 +50,30 @@ class UserProfileScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: AppTheme.primary, width: 2),
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-                        ),
-                        fit: BoxFit.cover,
-                      ),
+                    ),
+                    child: ClipOval(
+                      child: state.currentUser?.hasProfileImage == true
+                          ? AppImage(
+                              path: state.userProfileImage,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              color: AppTheme.primaryLight,
+                              child: Center(
+                                child: Text(
+                                  state.userName.isNotEmpty
+                                      ? state.userName[0].toUpperCase()
+                                      : 'U',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -64,7 +82,7 @@ class UserProfileScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Sachin Bhaskar',
+                          state.userName,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
@@ -73,7 +91,11 @@ class UserProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'sachin.bhaskar@gmail.com',
+                          state.currentUser != null && state.currentUser!.email.isNotEmpty
+                              ? state.currentUser!.email
+                              : state.userPhone.isNotEmpty
+                                  ? state.userPhone
+                                  : 'Not logged in',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             color: AppTheme.textSecondary,
@@ -87,7 +109,7 @@ class UserProfileScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'Active Tenant / Buyer',
+                            state.userRole,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,

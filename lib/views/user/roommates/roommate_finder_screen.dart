@@ -14,7 +14,7 @@ class RoommateFinderScreen extends StatelessWidget {
     BuildContext context,
     AppStateProvider state,
   ) {
-    final nameController = TextEditingController(text: 'Sachin Bhaskar');
+    final nameController = TextEditingController(text: state.userName);
     final ageController = TextEditingController(text: '24');
     final professionController =
         TextEditingController(text: 'Software Engineer');
@@ -395,7 +395,7 @@ class RoommateFinderScreen extends StatelessWidget {
                             habits: selectedHabits.toList(),
                             about: aboutController.text.trim(),
                             isVerified: true,
-                            phone: '+91 98765 43210',
+                            phone: state.userPhone.isNotEmpty ? state.userPhone : '+91 98765 43210',
                           );
 
                           state.addRoommate(newRm);

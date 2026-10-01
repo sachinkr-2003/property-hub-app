@@ -26,4 +26,44 @@ class VisitBooking {
     required this.createdAt,
     this.status = 'Confirmed',
   });
+
+  factory VisitBooking.fromJson(Map<String, dynamic> json) {
+    DateTime parsedDate = DateTime.now();
+    if (json['createdAt'] != null) {
+      try {
+        parsedDate = DateTime.parse(json['createdAt'].toString());
+      } catch (_) {}
+    }
+
+    return VisitBooking(
+      id: json['customId']?.toString() ?? json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      propertyId: json['propertyId']?.toString() ?? '',
+      propertyTitle: json['propertyTitle']?.toString() ?? 'Verified Property',
+      propertyAddress: json['locality']?.toString() ?? json['propertyAddress']?.toString() ?? 'Lucknow',
+      propertyImage: json['propertyImage']?.toString() ??
+          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80',
+      ownerName: json['ownerName']?.toString() ?? 'Direct Owner',
+      ownerPhone: json['ownerPhone']?.toString() ?? '+91 98765 00000',
+      visitDate: json['slotDate']?.toString() ?? json['visitDate']?.toString() ?? 'Tomorrow',
+      timeSlot: json['slotTime']?.toString() ?? json['timeSlot']?.toString() ?? 'Morning (10:00 AM - 1:00 PM)',
+      passCode: json['passCode']?.toString() ?? 'PH-VIS-${DateTime.now().millisecond}',
+      createdAt: parsedDate,
+      status: json['status']?.toString() ?? 'Confirmed',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'customId': id,
+      'propertyId': propertyId,
+      'propertyTitle': propertyTitle,
+      'locality': propertyAddress,
+      'ownerName': ownerName,
+      'ownerPhone': ownerPhone,
+      'slotDate': visitDate,
+      'slotTime': timeSlot,
+      'passCode': passCode,
+      'status': status,
+    };
+  }
 }

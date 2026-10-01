@@ -1018,8 +1018,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           // 2. Add Owner Lead
                           final newLead = PropertyLead(
                             id: 'lead-${DateTime.now().millisecondsSinceEpoch}',
-                            userName: 'Sachin Bhaskar',
-                            userPhone: '+91 98765 43210',
+                            userName: state.userName,
+                            userPhone: state.userPhone,
                             propertyTitle: widget.property.title,
                             propertyId: widget.property.id,
                             inquiryType: 'Visit Scheduled',
@@ -1243,9 +1243,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   void _showWriteReviewSheet() {
+    final state = Provider.of<AppStateProvider>(context, listen: false);
     double selectedRating = 5.0;
     String selectedRole = 'Current Tenant';
-    final nameCtrl = TextEditingController(text: 'Sachin Bhaskar');
+    final nameCtrl = TextEditingController(text: state.userName);
     final commentCtrl = TextEditingController();
 
     showModalBottomSheet(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/api_service.dart';
+import '../models/user_session_model.dart';
 import '../models/property_model.dart';
 import '../models/roommate_model.dart';
 import '../models/service_model.dart';
@@ -8,19 +9,44 @@ import '../models/used_item_model.dart';
 import '../models/lead_model.dart';
 import '../models/chat_model.dart';
 import '../models/visit_booking_model.dart';
+import '../models/notification_item_model.dart';
 
 enum AppRole { user, owner }
 
 class AppStateProvider extends ChangeNotifier {
   AppStateProvider() {
     _loadPersistedState();
-    loadLivePropertiesFromBackend();
+    loadAllLiveData();
+  }
+
+  Future<void> loadAllLiveData() async {
+    try {
+      await Future.wait([
+        loadLivePropertiesFromBackend(),
+        loadLiveServicesFromBackend(),
+        loadLiveUsedItemsFromBackend(),
+        loadLiveRoommatesFromBackend(),
+        loadLiveVisitsFromBackend(),
+        loadLiveNotificationsFromBackend(),
+        loadLiveConversationsFromBackend(),
+      ]);
+    } catch (e) {
+      debugPrint('[AppStateProvider] loadAllLiveData error: $e');
+    }
   }
 
   void _loadPersistedState() {
-    _isLoggedIn = StorageService.getLoggedIn(defaultValue: true);
+    _isLoggedIn = StorageService.getLoggedIn(defaultValue: false);
     final savedRole = StorageService.getRole(defaultRole: 'user');
     _currentRole = savedRole == 'owner' ? AppRole.owner : AppRole.user;
+
+    // Restore full UserSession from storage
+    final savedSession = StorageService.getUserSession();
+    if (savedSession != null) {
+      try {
+        _currentUser = UserSession.fromJson(savedSession);
+      } catch (_) {}
+    }
 
     final savedFavorites = StorageService.getFavorites();
     for (final prop in _properties) {
@@ -30,22 +56,75 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
+  // ─── User Session ──────────────────────────────────────────────────────────
+  UserSession? _currentUser;
+
+  /// Currently logged-in user (null if not logged in)
+  UserSession? get currentUser => _currentUser;
+
+  /// Shortcut getters used throughout the app
+  String get userName => _currentUser?.name ?? 'User';
+  String get userPhone => _currentUser?.formattedPhone ?? '';
+  String get userMobile => _currentUser?.mobile ?? '';
+  String get userRole => _currentUser?.role ?? 'Tenant';
+  String get userProfileImage => _currentUser?.profileImage ?? '';
+  String get userToken => _currentUser?.token ?? '';
+
   // Current Active Mode (User Mode vs Owner Mode)
   AppRole _currentRole = AppRole.user;
   AppRole get currentRole => _currentRole;
 
   // Session & Authentication State
-  bool _isLoggedIn = true;
+  bool _isLoggedIn = false;
   bool get isLoggedIn => _isLoggedIn;
 
+  /// Called after successful OTP verification — stores full session
+  Future<void> loginWithSession(UserSession session) async {
+    _currentUser = session;
+    _isLoggedIn = true;
+    await StorageService.setLoggedIn(true);
+    await StorageService.setAuthToken(session.token);
+    await StorageService.saveUserSession(session.toJson());
+    await StorageService.saveUserProfile(session.name, session.mobile);
+    notifyListeners();
+    // Load live data after login
+    loadAllLiveData();
+  }
+
+  /// Legacy quick-login (demo / fallback — no real session)
   void login() {
     _isLoggedIn = true;
     StorageService.setLoggedIn(true);
     notifyListeners();
   }
 
+  /// Update user profile fields locally and on backend
+  Future<void> updateUserProfile({String? name, String? city, String? locality, String? profileImage}) async {
+    if (_currentUser == null) return;
+    final updated = _currentUser!.copyWith(
+      name: name,
+      city: city,
+      locality: locality,
+      profileImage: profileImage,
+    );
+    _currentUser = updated;
+    await StorageService.saveUserSession(updated.toJson());
+    await StorageService.saveUserProfile(updated.name, updated.mobile);
+    notifyListeners();
+
+    // Sync to backend
+    await ApiService.updateProfile(
+      token: updated.token,
+      name: name,
+      city: city,
+      locality: locality,
+      profileImage: profileImage,
+    );
+  }
+
   void logout() {
     _isLoggedIn = false;
+    _currentUser = null;
     _userNavIndex = 0;
     _ownerNavIndex = 0;
     _currentRole = AppRole.user;
@@ -439,11 +518,38 @@ class AppStateProvider extends ChangeNotifier {
     ),
   ];
 
+  bool _isLoadingRoommates = false;
+  bool get isLoadingRoommates => _isLoadingRoommates;
+
   List<RoommateProfile> get roommates => _roommates;
+
+  Future<void> loadLiveRoommatesFromBackend() async {
+    _isLoadingRoommates = true;
+    notifyListeners();
+    try {
+      final liveRoommates = await ApiService.fetchRoommates();
+      if (liveRoommates.isNotEmpty) {
+        _roommates.clear();
+        _roommates.addAll(liveRoommates);
+        debugPrint('[AppStateProvider] Loaded ${liveRoommates.length} roommates live from MongoDB');
+      }
+    } catch (e) {
+      debugPrint('[AppStateProvider] Fallback roommates: $e');
+    } finally {
+      _isLoadingRoommates = false;
+      notifyListeners();
+    }
+  }
 
   void addRoommate(RoommateProfile roommate) {
     _roommates.insert(0, roommate);
     notifyListeners();
+
+    ApiService.createRoommate(roommate.toJson()).then((created) {
+      if (created != null) {
+        debugPrint('[AppStateProvider] Created roommate in MongoDB: ${created.id}');
+      }
+    });
   }
 
   // Bachelor Services List
@@ -558,7 +664,28 @@ class AppStateProvider extends ChangeNotifier {
     ),
   ];
 
+  bool _isLoadingServices = false;
+  bool get isLoadingServices => _isLoadingServices;
+
   List<BachelorService> get services => _services;
+
+  Future<void> loadLiveServicesFromBackend() async {
+    _isLoadingServices = true;
+    notifyListeners();
+    try {
+      final liveServices = await ApiService.fetchServices();
+      if (liveServices.isNotEmpty) {
+        _services.clear();
+        _services.addAll(liveServices);
+        debugPrint('[AppStateProvider] Loaded ${liveServices.length} services live from MongoDB');
+      }
+    } catch (e) {
+      debugPrint('[AppStateProvider] Fallback services: $e');
+    } finally {
+      _isLoadingServices = false;
+      notifyListeners();
+    }
+  }
 
   final List<ServiceBooking> _bookings = [
     ServiceBooking(
@@ -649,11 +776,38 @@ class AppStateProvider extends ChangeNotifier {
     ),
   ];
 
+  bool _isLoadingUsedItems = false;
+  bool get isLoadingUsedItems => _isLoadingUsedItems;
+
   List<UsedItem> get usedItems => _usedItems;
+
+  Future<void> loadLiveUsedItemsFromBackend() async {
+    _isLoadingUsedItems = true;
+    notifyListeners();
+    try {
+      final liveItems = await ApiService.fetchUsedItems();
+      if (liveItems.isNotEmpty) {
+        _usedItems.clear();
+        _usedItems.addAll(liveItems);
+        debugPrint('[AppStateProvider] Loaded ${liveItems.length} used items live from MongoDB');
+      }
+    } catch (e) {
+      debugPrint('[AppStateProvider] Fallback used items: $e');
+    } finally {
+      _isLoadingUsedItems = false;
+      notifyListeners();
+    }
+  }
 
   void addUsedItem(UsedItem item) {
     _usedItems.insert(0, item);
     notifyListeners();
+
+    ApiService.createUsedItem(item.toJson()).then((created) {
+      if (created != null) {
+        debugPrint('[AppStateProvider] Created used item in MongoDB: ${created.id}');
+      }
+    });
   }
 
   // Leads & Inquiries for Owner Mode
@@ -764,6 +918,20 @@ class AppStateProvider extends ChangeNotifier {
 
   List<ChatThread> get chats => _chats;
 
+  Future<void> loadLiveConversationsFromBackend() async {
+    try {
+      final liveChats = await ApiService.fetchConversations();
+      if (liveChats.isNotEmpty) {
+        _chats.clear();
+        _chats.addAll(liveChats);
+        notifyListeners();
+        debugPrint('[AppStateProvider] Loaded ${liveChats.length} conversations from MongoDB');
+      }
+    } catch (e) {
+      debugPrint('[AppStateProvider] Fallback conversations: $e');
+    }
+  }
+
   ChatThread getOrCreateChatThread({
     required String participantName,
     required String propertyTitle,
@@ -801,6 +969,24 @@ class AppStateProvider extends ChangeNotifier {
     );
     _chats.insert(0, newThread);
     notifyListeners();
+
+    // Async persist to MongoDB
+    ApiService.createConversation(
+      participantName: participantName,
+      propertyTitle: propertyTitle,
+      avatarUrl: avatarUrl,
+      role: role,
+      initialMessage: 'Hi, I would like to enquire about: $propertyTitle',
+    ).then((created) {
+      if (created != null) {
+        final idx = _chats.indexWhere((c) => c.id == newThread.id);
+        if (idx != -1) {
+          _chats[idx] = created;
+          notifyListeners();
+        }
+      }
+    });
+
     return newThread;
   }
 
@@ -819,6 +1005,9 @@ class AppStateProvider extends ChangeNotifier {
       _chats[index].lastMessage = text;
       _chats[index].lastMessageTime = now;
       notifyListeners();
+
+      // Async backend call to persist in MongoDB
+      ApiService.sendChatMessage(threadId, text, senderName: userName);
     }
   }
 
@@ -826,32 +1015,56 @@ class AppStateProvider extends ChangeNotifier {
   bool isAadhaarUploaded = true;
   bool isPanUploaded = true;
   bool isPhotoUploaded = true;
+  String? aadhaarDocUrl;
+  String? panDocUrl;
+  String? selfiePhotoUrl;
   String kycStatus = 'Verified'; // Verified, Pending
 
-  void submitKyc({
+  Future<bool> submitKyc({
     String name = 'Rajesh Kumar',
     String mobile = '+91 98765 43210',
     String email = 'rajesh.owner@propertyhub.in',
     String aadhaar = '4521-8890-3412',
     String pan = 'ABCDE1234F',
     String registry = 'Indira Nagar Registry Deed',
-  }) {
+    String? aadhaarFilePath,
+    String? panFilePath,
+    String? selfieFilePath,
+  }) async {
     isAadhaarUploaded = true;
     isPanUploaded = true;
     isPhotoUploaded = true;
     kycStatus = 'Pending';
     notifyListeners();
 
-    ApiService.submitKyc(
+    // If local file paths are passed, upload them via multipart first
+    if ((aadhaarFilePath != null && aadhaarFilePath.isNotEmpty) ||
+        (panFilePath != null && panFilePath.isNotEmpty)) {
+      final kycUrls = await ApiService.uploadKycDocs(
+        aadhaarPath: aadhaarFilePath,
+        panPath: panFilePath,
+      );
+      if (kycUrls['aadhaarUrl'] != null) aadhaarDocUrl = kycUrls['aadhaarUrl'];
+      if (kycUrls['panUrl'] != null) panDocUrl = kycUrls['panUrl'];
+    }
+
+    if (selfieFilePath != null && selfieFilePath.isNotEmpty) {
+      final selfieUrl = await ApiService.uploadSingleFile(selfieFilePath);
+      if (selfieUrl != null) selfiePhotoUrl = selfieUrl;
+    }
+
+    final success = await ApiService.submitKyc(
       ownerName: name,
       mobile: mobile,
       email: email,
       aadhaarNumber: aadhaar,
       panNumber: pan,
       registryDetails: registry,
-    ).then((success) {
-      debugPrint('[AppStateProvider] KYC submitted to backend: $success');
-    });
+    );
+
+    debugPrint('[AppStateProvider] KYC submitted to backend: $success');
+    notifyListeners();
+    return success;
   }
 
   // Visit Bookings (Digital Visit Passes)
@@ -872,11 +1085,38 @@ class AppStateProvider extends ChangeNotifier {
     ),
   ];
 
+  bool _isLoadingVisits = false;
+  bool get isLoadingVisits => _isLoadingVisits;
+
   List<VisitBooking> get visitBookings => _visitBookings;
+
+  Future<void> loadLiveVisitsFromBackend() async {
+    _isLoadingVisits = true;
+    notifyListeners();
+    try {
+      final liveVisits = await ApiService.fetchVisits();
+      if (liveVisits.isNotEmpty) {
+        _visitBookings.clear();
+        _visitBookings.addAll(liveVisits);
+        debugPrint('[AppStateProvider] Loaded ${liveVisits.length} visits live from MongoDB');
+      }
+    } catch (e) {
+      debugPrint('[AppStateProvider] Fallback visits: $e');
+    } finally {
+      _isLoadingVisits = false;
+      notifyListeners();
+    }
+  }
 
   void addVisitBooking(VisitBooking booking) {
     _visitBookings.insert(0, booking);
     notifyListeners();
+
+    ApiService.createVisit(booking.toJson()).then((created) {
+      if (created != null) {
+        debugPrint('[AppStateProvider] Created visit in MongoDB: ${created.id}');
+      }
+    });
   }
 
   void cancelVisitBooking(String id) {
@@ -885,6 +1125,60 @@ class AppStateProvider extends ChangeNotifier {
       _visitBookings.removeAt(index);
       notifyListeners();
     }
+  }
+
+  // ----------------------------------------------------
+  // Push Notifications & Communication Center
+  // ----------------------------------------------------
+  List<NotificationItem> _notifications = [];
+  bool _isLoadingNotifications = false;
+
+  List<NotificationItem> get notifications => _notifications;
+  bool get isLoadingNotifications => _isLoadingNotifications;
+  int get unreadNotificationsCount => _notifications.where((n) => !n.isRead).length;
+
+  Future<void> loadLiveNotificationsFromBackend() async {
+    _isLoadingNotifications = true;
+    notifyListeners();
+    try {
+      final audience = _currentRole == AppRole.owner ? 'OwnerHub Owner App' : 'BachelorHub User App';
+      final liveNotifs = await ApiService.fetchNotifications(
+        audience: audience,
+        userId: _currentUser?.id,
+      );
+      if (liveNotifs.isNotEmpty) {
+        _notifications = liveNotifs;
+        debugPrint('[AppStateProvider] Loaded ${liveNotifs.length} notifications from MongoDB');
+      }
+    } catch (e) {
+      debugPrint('[AppStateProvider] Fallback notifications: $e');
+    } finally {
+      _isLoadingNotifications = false;
+      notifyListeners();
+    }
+  }
+
+  void markNotificationAsRead(String id) {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx != -1 && !_notifications[idx].isRead) {
+      _notifications[idx] = _notifications[idx].copyWith(isRead: true);
+      notifyListeners();
+      ApiService.markNotificationRead(id);
+    }
+  }
+
+  void markAllNotificationsAsRead() {
+    _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
+    notifyListeners();
+    for (final n in _notifications) {
+      ApiService.markNotificationRead(n.id);
+    }
+  }
+
+  Future<void> clearAllNotifications() async {
+    _notifications.clear();
+    notifyListeners();
+    await ApiService.clearAllNotifications();
   }
 }
 

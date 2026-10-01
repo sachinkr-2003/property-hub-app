@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/api_service.dart';
 import '../../../models/property_model.dart';
 import '../../../providers/app_state_provider.dart';
 
@@ -111,9 +112,34 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   }
 
   // Step 5: Docs
-  final bool _titleDeedUploaded = true;
-  final bool _taxReceiptUploaded = true;
-  final bool _idProofUploaded = true;
+  String? _deedDocPath;
+  String? _taxReceiptPath;
+  String? _govIdPath;
+  bool _isUploadingData = false;
+
+  Future<void> _pickDocument(String type) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      if (picked != null) {
+        setState(() {
+          if (type == 'deed') {
+            _deedDocPath = picked.path;
+          } else if (type == 'tax') {
+            _taxReceiptPath = picked.path;
+          } else if (type == 'id') {
+            _govIdPath = picked.path;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick document: $e')),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -133,29 +159,46 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     }
   }
 
-  void _submitProperty() {
+  Future<void> _submitProperty() async {
+    setState(() => _isUploadingData = true);
     final state = Provider.of<AppStateProvider>(context, listen: false);
+
+    List<String> finalImages = [];
+    if (_pickedImages.isNotEmpty) {
+      final uploadPaths = _pickedImages.map((f) => f.path).toList();
+      final uploadedUrls = await ApiService.uploadPropertyImages(uploadPaths);
+      if (uploadedUrls.isNotEmpty) {
+        finalImages = uploadedUrls;
+      }
+    }
+
+    if (finalImages.isEmpty) {
+      finalImages = [
+        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
+        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
+      ];
+    }
+
+    if (_deedDocPath != null && _deedDocPath!.isNotEmpty) {
+      await ApiService.uploadDeedDoc(_deedDocPath!);
+    }
+
     final newProp = Property(
       id: 'prop-${DateTime.now().millisecondsSinceEpoch}',
-      title: _titleController.text,
+      title: _titleController.text.trim(),
       type: _selectedCategory,
       listingType: _listingType,
       price: double.tryParse(_priceController.text) ?? 15000,
       deposit: double.tryParse(_depositController.text) ?? 30000,
       bhk: _bhk,
       areaSqFt: int.tryParse(_areaController.text) ?? 1150,
-      address: _localityController.text,
-      locality: _localityController.text.split(',').first,
+      address: _localityController.text.trim(),
+      locality: _localityController.text.split(',').first.trim(),
       city: 'Lucknow',
-      images: _pickedImages.isNotEmpty
-          ? _pickedImages.map((f) => f.path).toList()
-          : [
-              'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
-              'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
-            ],
+      images: finalImages,
       isVerified: true,
-      ownerName: 'Rajesh Kumar',
-      ownerPhone: '+91 98765 43210',
+      ownerName: state.userName.isNotEmpty ? state.userName : 'Property Owner',
+      ownerPhone: state.userPhone.isNotEmpty ? state.userPhone : '+91 98765 43210',
       ownerRole: 'Direct Owner',
       amenities: _selectedAmenities.toList(),
       furnishing: 'Semi-Furnished',
@@ -165,6 +208,8 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     );
 
     state.addProperty(newProp);
+    if (!mounted) return;
+    setState(() => _isUploadingData = false);
 
     showDialog(
       context: context,
@@ -355,15 +400,21 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: _nextStep,
-                    child: Text(
-                      _currentStep == 5 ? 'Submit for Verification' : 'Next Step',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
+                    onPressed: _isUploadingData ? null : _nextStep,
+                    child: _isUploadingData
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(
+                            _currentStep == 5 ? 'Submit for Verification' : 'Next Step',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -823,50 +874,66 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         ),
         const SizedBox(height: 20),
 
-        _buildDocUploadTile('Title Deed / Registry Copy', _titleDeedUploaded),
-        _buildDocUploadTile('Electricity / Property Tax Bill', _taxReceiptUploaded),
-        _buildDocUploadTile('Aadhaar / Gov ID Proof', _idProofUploaded),
+        _buildDocUploadTile(
+          'Title Deed / Registry Copy',
+          _deedDocPath != null,
+          () => _pickDocument('deed'),
+        ),
+        _buildDocUploadTile(
+          'Electricity / Property Tax Bill',
+          _taxReceiptPath != null,
+          () => _pickDocument('tax'),
+        ),
+        _buildDocUploadTile(
+          'Aadhaar / Gov ID Proof',
+          _govIdPath != null,
+          () => _pickDocument('id'),
+        ),
       ],
     );
   }
 
-  Widget _buildDocUploadTile(String title, bool isUploaded) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isUploaded ? const Color(0xFFF0FDF4) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isUploaded ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+  Widget _buildDocUploadTile(String title, bool isUploaded, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isUploaded ? const Color(0xFFF0FDF4) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isUploaded ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isUploaded ? Icons.check_circle : Icons.upload_file_rounded,
-            color: isUploaded ? AppTheme.verifiedGreen : AppTheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          Text(
-            isUploaded ? 'Uploaded' : 'Upload',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+        child: Row(
+          children: [
+            Icon(
+              isUploaded ? Icons.check_circle : Icons.upload_file_rounded,
               color: isUploaded ? AppTheme.verifiedGreen : AppTheme.primary,
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            Text(
+              isUploaded ? 'Attached ✓' : 'Upload',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isUploaded ? AppTheme.verifiedGreen : AppTheme.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -24,28 +24,37 @@ class ChatListScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: state.chats.isEmpty
-            ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.chat_bubble_outline_rounded, size: 64, color: AppTheme.textMuted),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No conversations yet',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
+        child: RefreshIndicator(
+          onRefresh: () => state.loadLiveConversationsFromBackend(),
+          child: state.chats.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                    const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.chat_bubble_outline_rounded, size: 64, color: AppTheme.textMuted),
+                          SizedBox(height: 16),
+                          Text(
+                            'No conversations yet',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              itemCount: state.chats.length,
-              separatorBuilder: (context, index) => const Divider(color: Color(0xFFF1F5F9), height: 1),
+                  ],
+                )
+              : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  itemCount: state.chats.length,
+                  separatorBuilder: (context, index) => const Divider(color: Color(0xFFF1F5F9), height: 1),
               itemBuilder: (context, index) {
                 final chat = state.chats[index];
                 return ListTile(
@@ -132,6 +141,7 @@ class ChatListScreen extends StatelessWidget {
                 );
               },
             ),
+        ),
       ),
     );
   }
