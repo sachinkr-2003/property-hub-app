@@ -63,7 +63,7 @@ class SubscriptionScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Property Hub is completely free for all landlords, owners, and bachelors. Post unlimited listings without paying a single rupee.',
+                'Search is completely free for all landlords, owners, and bachelors. Post unlimited listings without paying a single rupee.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,

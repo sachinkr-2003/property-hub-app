@@ -68,7 +68,7 @@ class SplashScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Property Hub Ecosystem',
+                      'Search Ecosystem',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,

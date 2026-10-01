@@ -292,7 +292,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 ),
                               ),
                               Text(
-                                'Ownership documents verified by Property Hub team.',
+                                'Ownership documents verified by Search team.',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   color: const Color(0xFF166534),
@@ -499,7 +499,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   context,
                                   p.ownerPhone,
                                   message:
-                                      'Hi ${p.ownerName}, I saw your property "${p.title}" on Property Hub and would like to enquire.',
+                                      'Hi ${p.ownerName}, I saw your property "${p.title}" on Search and would like to enquire.',
                                 ),
                               ),
                             ),

@@ -98,7 +98,7 @@ This Rent Agreement is made and executed on this $startDate between:
 
 FIRST PARTY (LANDLORD / OWNER):
 Name: ${_landlordController.text}
-Status: Verified Landlord (Property Hub Verified)
+Status: Verified Landlord (Search Verified)
 Hereinafter referred to as the "LANDLORD / LESSOR" (which expression shall include his legal heirs, successors, and representatives).
 
 AND

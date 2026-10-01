@@ -34,7 +34,7 @@ class PropertyHubApp extends StatelessWidget {
     return Consumer<AppStateProvider>(
       builder: (context, state, _) {
         return MaterialApp(
-          title: 'Property Hub',
+          title: 'Search',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           home: state.isLoggedIn

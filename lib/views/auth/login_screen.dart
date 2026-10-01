@@ -148,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Text(
                   _isLoginMode
                       ? 'Login to access your properties'
-                      : 'Join Property Hub today',
+                      : 'Join Search today',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,

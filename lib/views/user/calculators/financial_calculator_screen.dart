@@ -232,7 +232,7 @@ class _FinancialCalculatorScreenState extends State<FinancialCalculatorScreen>
                           '💰 *Total Bill:* ₹${_totalMonthlyExpense.toStringAsFixed(0)}\n'
                           '👥 *Roommates:* $_roommateCount\n'
                           '👉 *Per Person Share:* ₹${_perPersonExpense.toStringAsFixed(0)} /month\n\n'
-                          'Calculated via Property Hub App';
+                          'Calculated via Search App';
                       LauncherUtils.openWhatsApp(context, '', message: message);
                     },
                   ),

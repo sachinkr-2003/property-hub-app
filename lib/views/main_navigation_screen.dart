@@ -66,7 +66,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Press back again to exit Property Hub',
+            'Press back again to exit Search',
             style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
           ),
           duration: const Duration(seconds: 2),

@@ -325,7 +325,7 @@ class UserProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
             Text(
-              'BachelorHub • Property Hub App v1.0.0\n100% Genuine Direct Owner Platform',
+              'BachelorHub • Search App v1.0.0\n100% Genuine Direct Owner Platform',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11,
