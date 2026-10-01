@@ -12,8 +12,14 @@ import '../../models/notification_item_model.dart';
 import '../../models/chat_model.dart';
 
 class ApiService {
-  // Configurable base URL for Android Emulator, iOS Simulator, and Web
+  // Live Render Cloud Backend URL (and localhost fallback)
+  static const String liveCloudUrl = 'https://property-hub-backend-j0ea.onrender.com';
+  static const bool useLiveCloud = true;
+
   static String get serverRootUrl {
+    if (useLiveCloud) {
+      return liveCloudUrl;
+    }
     if (kIsWeb) {
       return 'http://localhost:5000';
     }
