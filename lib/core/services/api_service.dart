@@ -14,7 +14,7 @@ import '../../models/chat_model.dart';
 class ApiService {
   // Live Render Cloud Backend URL (and localhost fallback)
   static const String liveCloudUrl = 'https://property-hub-backend-j0ea.onrender.com';
-  static const bool useLiveCloud = true;
+  static const bool useLiveCloud = false;
 
   static String get serverRootUrl {
     if (useLiveCloud) {
@@ -100,6 +100,159 @@ class ApiService {
       debugPrint('[Auth] verifyOtp failed: ${decoded['message']}');
     } catch (e) {
       debugPrint('[Auth] verifyOtp error: $e');
+    }
+    return null;
+  }
+
+  /// ──────────────────────────────────────────────────────────────────────────
+  /// Email OTP Login
+  /// ──────────────────────────────────────────────────────────────────────────
+
+  /// Send Email OTP
+  static Future<Map<String, dynamic>?> sendEmailOtp(String email) async {
+    try {
+      final body = <String, dynamic>{'email': email};
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/send-email-otp'),
+            headers: _headers,
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      final decoded = json.decode(res.body);
+      if (res.statusCode == 200 && decoded['success'] == true) {
+        return decoded['data'] as Map<String, dynamic>?;
+      }
+      debugPrint('[Auth] sendEmailOtp failed: ${decoded['message']}');
+    } catch (e) {
+      debugPrint('[Auth] sendEmailOtp error: $e');
+    }
+    return null;
+  }
+
+  /// Verify Email OTP → returns UserSession on success
+  static Future<UserSession?> verifyEmailOtp({
+    required String email,
+    required String otp,
+    String? name,
+    String? role,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'email': email,
+        'otp': otp,
+        'name': ?name,
+        'role': ?role,
+      };
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/verify-email-otp'),
+            headers: _headers,
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      final decoded = json.decode(res.body);
+      if (res.statusCode == 200 && decoded['success'] == true) {
+        return UserSession.fromJson(decoded['data'] as Map<String, dynamic>);
+      }
+      debugPrint('[Auth] verifyEmailOtp failed: ${decoded['message']}');
+    } catch (e) {
+      debugPrint('[Auth] verifyEmailOtp error: $e');
+    }
+    return null;
+  }
+
+  /// ──────────────────────────────────────────────────────────────────────────
+  /// Other Logins
+  /// ──────────────────────────────────────────────────────────────────────────
+
+  /// Google Login (Real) → returns UserSession on success
+  static Future<UserSession?> googleLogin({
+    required String idToken,
+    String? role,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'idToken': idToken,
+        'role': ?role,
+      };
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/google-login'),
+            headers: _headers,
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      final decoded = json.decode(res.body);
+      if ((res.statusCode == 200 || res.statusCode == 201) &&
+          decoded['success'] == true) {
+        return UserSession.fromJson(decoded['data'] as Map<String, dynamic>);
+      }
+      debugPrint('[Auth] googleLogin failed: ${decoded['message']}');
+    } catch (e) {
+      debugPrint('[Auth] googleLogin error: $e');
+    }
+    return null;
+  }
+
+  /// Email Login
+  static Future<UserSession?> emailLogin({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'email': email,
+        'password': password,
+      };
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/login-email'),
+            headers: _headers,
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      final decoded = json.decode(res.body);
+      if (res.statusCode == 200 && decoded['success'] == true) {
+        return UserSession.fromJson(decoded['data'] as Map<String, dynamic>);
+      }
+      debugPrint('[Auth] emailLogin failed: ${decoded['message']}');
+    } catch (e) {
+      debugPrint('[Auth] emailLogin error: $e');
+    }
+    return null;
+  }
+
+  /// Email Register
+  static Future<UserSession?> emailRegister({
+    required String email,
+    required String password,
+    required String name,
+    required String mobile,
+    String? role,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'email': email,
+        'password': password,
+        'name': name,
+        'mobile': mobile,
+        'role': ?role,
+      };
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/register-email'),
+            headers: _headers,
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      final decoded = json.decode(res.body);
+      if (res.statusCode == 201 && decoded['success'] == true) {
+        return UserSession.fromJson(decoded['data'] as Map<String, dynamic>);
+      }
+      debugPrint('[Auth] emailRegister failed: ${decoded['message']}');
+    } catch (e) {
+      debugPrint('[Auth] emailRegister error: $e');
     }
     return null;
   }

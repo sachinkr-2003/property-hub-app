@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/api_service.dart';
 import '../../providers/app_state_provider.dart';
@@ -14,131 +15,104 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // ─── Step tracking ─────────────────────────────────────────────────────────
-  bool _otpSent = false;
   bool _isLoading = false;
   String? _errorMsg;
-  String? _devOtp; // shown only in debug builds
-
-  // ─── Controllers ───────────────────────────────────────────────────────────
-  final _phoneController = TextEditingController();
-  final _otpController   = TextEditingController();
-  final _nameController  = TextEditingController();
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _otpController.dispose();
-    _nameController.dispose();
-    super.dispose();
-  }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Step 1 — Send OTP
+  // Login with Gmail (Real Google Sign In - Popup)
   // ──────────────────────────────────────────────────────────────────────────
-  Future<void> _sendOtp() async {
-    final mobile = _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
-    if (mobile.length != 10) {
-      setState(() => _errorMsg = 'Please enter a valid 10-digit mobile number');
-      return;
-    }
-
+  Future<void> _loginWithGmail() async {
     setState(() {
       _isLoading = true;
       _errorMsg = null;
     });
 
-    final result = await ApiService.sendOtp(mobile);
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
 
-    if (!mounted) return;
+      // Trigger the Google account selection popup
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
-    if (result != null) {
-      setState(() {
-        _otpSent = true;
-        _isLoading = false;
-        // Show dev OTP on screen in non-production
-        _devOtp = result['devOtp']?.toString();
-      });
-    } else {
-      // Fallback: even if backend unreachable, allow dev to proceed with '1234'
-      setState(() {
-        _otpSent = true;
-        _isLoading = false;
-        _devOtp = '1234';
-        _errorMsg = 'Backend unreachable — using dev OTP: 1234';
-      });
-    }
-  }
+      if (googleUser == null) {
+        // User canceled the sign-in
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Step 2 — Verify OTP → Login
-  // ──────────────────────────────────────────────────────────────────────────
-  Future<void> _verifyOtp() async {
-    final mobile = _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
-    final otp    = _otpController.text.trim();
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-    if (otp.length < 4) {
-      setState(() => _errorMsg = 'Please enter the 4-digit OTP');
-      return;
-    }
+      if (googleAuth.idToken == null) {
+        setState(() {
+          _isLoading = false;
+          _errorMsg = 'Failed to get ID Token from Google';
+        });
+        return;
+      }
 
-    setState(() {
-      _isLoading = true;
-      _errorMsg = null;
-    });
-
-    final session = await ApiService.verifyOtp(
-      mobile: mobile,
-      otp: otp,
-      name: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
-    );
-
-    if (!mounted) return;
-
-    if (session != null) {
-      await Provider.of<AppStateProvider>(context, listen: false)
-          .loginWithSession(session);
+      // Send the idToken to our backend for verification
+      final session = await ApiService.googleLogin(
+        idToken: googleAuth.idToken!,
+        role: 'Tenant', // Default role
+      );
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-      );
-    } else {
+
+      if (session != null) {
+        await Provider.of<AppStateProvider>(context, listen: false)
+            .loginWithSession(session);
+        
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        );
+      } else {
+        // Sign out of google locally if backend failed so they can try again
+        await googleSignIn.signOut();
+        setState(() {
+          _isLoading = false;
+          _errorMsg = 'Backend verification failed. Check Client ID in backend.';
+        });
+      }
+    } catch (error) {
       setState(() {
         _isLoading = false;
-        _errorMsg = 'Invalid OTP. Please try again.';
+        _errorMsg = 'Google Sign In Error. Is Firebase configured properly?';
       });
+      debugPrint('Google Sign In Error: $error');
     }
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Quick Demo Login (skips real OTP — for showcase)
+  // Quick Demo Login (Hidden for dev fallback)
   // ──────────────────────────────────────────────────────────────────────────
-  Future<void> _quickDemoLogin() async {
+  Future<void> _demoLogin() async {
     setState(() => _isLoading = true);
-
-    final session = await ApiService.verifyOtp(
-      mobile: '9999999999',
-      otp: '1234',
+    // Fake a session using our new email OTP logic or hardcoded
+    final session = await ApiService.emailRegister(
+      email: 'demo@propertyhub.com',
+      password: 'demo_password123',
       name: 'Demo User',
+      mobile: '9999999999',
+    ) ?? await ApiService.emailLogin(
+      email: 'demo@propertyhub.com',
+      password: 'demo_password123',
     );
 
     if (!mounted) return;
-
     if (session != null) {
-      await Provider.of<AppStateProvider>(context, listen: false)
-          .loginWithSession(session);
+      await Provider.of<AppStateProvider>(context, listen: false).loginWithSession(session);
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNavigationScreen()));
     } else {
-      // True fallback — local session only
-      Provider.of<AppStateProvider>(context, listen: false).login();
+      setState(() {
+        _isLoading = false;
+        _errorMsg = 'Demo login failed';
+      });
     }
-
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-    );
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -149,327 +123,132 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 20),
-
+              const Spacer(),
               // ── Logo ──────────────────────────────────────────────────────
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Center(
+                  child: Icon(Icons.home_work_rounded, size: 48, color: AppTheme.primary),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              Text(
+                'Property Hub',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Find your perfect home easily.\nLogin directly with your Google account.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  color: AppTheme.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 48),
+
+              // ── Error Message ────────────────────────────────────────────
+              if (_errorMsg != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryLight,
-                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
-                  child: const Center(
-                    child: Icon(Icons.home_work_rounded, size: 42, color: AppTheme.primary),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              Center(
-                child: Text(
-                  _otpSent ? 'Verify OTP' : 'Welcome Back',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  _otpSent
-                      ? 'OTP sent to +91 ${_phoneController.text.trim()}'
-                      : 'Login to access genuine verified properties',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 36),
-
-              // ── Step 1 — Phone Number ────────────────────────────────────
-              if (!_otpSent) ...[
-                Text(
-                  'Mobile Number',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 10,
-                  decoration: InputDecoration(
-                    counterText: '',
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '+91',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(width: 1, height: 22, color: const Color(0xFFCBD5E1)),
-                        ],
-                      ),
-                    ),
-                    hintText: 'Enter 10-digit number',
-                  ),
-                ),
-              ],
-
-              // ── Step 2 — OTP + optional Name ────────────────────────────
-              if (_otpSent) ...[
-                // Change number
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _otpSent = false;
-                    _errorMsg = null;
-                    _otpController.clear();
-                  }),
                   child: Row(
                     children: [
-                      const Icon(Icons.arrow_back_ios_rounded, size: 14, color: AppTheme.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Change number',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.w600,
+                      const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _errorMsg!,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: const Color(0xFFB91C1C),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Dev OTP hint
-                if (_devOtp != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8E1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFFFD54F)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, size: 16, color: Color(0xFFF59E0B)),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Dev OTP: $_devOtp',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFFF59E0B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                Text(
-                  'Enter OTP',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 4,
-                  autofocus: true,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 10,
-                  ),
-                  decoration: InputDecoration(
-                    counterText: '',
-                    hintText: '• • • •',
-                    hintStyle: GoogleFonts.plusJakartaSans(
-                      fontSize: 22,
-                      letterSpacing: 10,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                Text(
-                  'Your Name (optional for new users)',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _nameController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.textMuted),
-                    hintText: 'e.g. Rohit Kumar',
-                  ),
-                ),
+                const SizedBox(height: 24),
               ],
 
-              // ── Error Message ────────────────────────────────────────────
-              if (_errorMsg != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _errorMsg!,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      color: const Color(0xFFEF4444),
-                    ),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 28),
-
-              // ── Primary CTA ───────────────────────────────────────────────
+              // ── Direct Gmail Login Button ───────────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : (_otpSent ? _verifyOtp : _sendOtp),
-                  child: _isLoading
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _loginWithGmail,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: _isLoading
+                      ? const SizedBox.shrink()
+                      : Image.network(
+                          'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
+                          height: 24,
+                        ),
+                  label: _isLoading
                       ? const SizedBox(
-                          width: 22,
-                          height: 22,
+                          width: 24,
+                          height: 24,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
+                            color: AppTheme.primary,
+                            strokeWidth: 3,
                           ),
                         )
                       : Text(
-                          _otpSent ? 'Verify & Login' : 'Send OTP',
+                          'Continue with Google',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
                         ),
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // ── Quick Demo Login ──────────────────────────────────────────
-              Center(
-                child: TextButton.icon(
-                  onPressed: _isLoading ? null : _quickDemoLogin,
-                  icon: const Icon(Icons.flash_on_rounded, size: 18, color: AppTheme.accent),
-                  label: Text(
-                    'Quick Demo Login (Skip OTP)',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
+              
+              const Spacer(),
+              
+              // ── Dev Demo Login (Small text at bottom) ──────────────────────────────────
+              TextButton(
+                onPressed: _demoLogin,
+                child: Text(
+                  'Skip for now (Demo Login)',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppTheme.textMuted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
-
-              // ── Divider ───────────────────────────────────────────────────
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'OR',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
-                ],
-              ),
-              const SizedBox(height: 28),
-
-              // ── Owner Onboarding Banner ───────────────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryLight,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.vpn_key_rounded, color: AppTheme.primary, size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Are you a Property Owner?',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: AppTheme.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'List property free & connect directly',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.textMuted),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

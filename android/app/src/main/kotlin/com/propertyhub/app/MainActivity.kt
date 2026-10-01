@@ -1,4 +1,4 @@
-package com.propertyhub.property_hub_app
+package com.propertyhub.app
 
 import io.flutter.embedding.android.FlutterActivity
 
