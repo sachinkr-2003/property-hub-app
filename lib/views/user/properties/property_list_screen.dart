@@ -46,7 +46,7 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
   Widget build(BuildContext context) {
     final state = Provider.of<AppStateProvider>(context);
     final properties = state.properties.where((p) {
-      if (p.status == 'Rejected') return false;
+      if (!p.isVerified || p.status != 'Active') return false;
 
       if (_activeFilter == 'Rent' && p.listingType != 'Rent') return false;
       if (_activeFilter == 'Buy' && p.listingType != 'Buy') return false;

@@ -8,6 +8,7 @@ import '../../../models/visit_booking_model.dart';
 import '../../../providers/app_state_provider.dart';
 import '../../../core/utils/launcher_utils.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/property_map_widget.dart';
 import '../chat/chat_conversation_screen.dart';
 import '../visits/my_visits_screen.dart';
 import '../compare/property_compare_screen.dart';
@@ -507,6 +508,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         ),
                       ],
                     ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Google Maps Location & Vicinity Section
+                  PropertyMapWidget(
+                    location: p.locality,
+                    address: p.address,
                   ),
 
                   const SizedBox(height: 20),

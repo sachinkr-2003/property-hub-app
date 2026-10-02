@@ -57,20 +57,24 @@ class UserSession {
   /// Create an updated copy with changed fields
   UserSession copyWith({
     String? name,
+    String? mobile,
+    String? email,
+    String? role,
     String? city,
     String? locality,
     String? profileImage,
+    String? token,
   }) {
     return UserSession(
       id: id,
       name: name ?? this.name,
-      mobile: mobile,
-      email: email,
-      role: role,
+      mobile: mobile ?? this.mobile,
+      email: email ?? this.email,
+      role: role ?? this.role,
       profileImage: profileImage ?? this.profileImage,
       city: city ?? this.city,
       locality: locality ?? this.locality,
-      token: token,
+      token: token ?? this.token,
     );
   }
 
@@ -88,5 +92,5 @@ class UserSession {
 
   /// Whether profile image is a real URL
   bool get hasProfileImage =>
-      profileImage.isNotEmpty && profileImage.startsWith('http');
+      profileImage.isNotEmpty && (profileImage.startsWith('http') || profileImage.startsWith('data:image') || profileImage.startsWith('/'));
 }

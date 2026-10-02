@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
@@ -42,6 +43,26 @@ class AppImage extends StatelessWidget {
 
     if (cleanPath.isEmpty) {
       return _wrapBorder(_buildPlaceholder());
+    }
+
+    // 0. Base64 Data URI support (e.g. data:image/jpeg;base64,...)
+    if (cleanPath.startsWith('data:image')) {
+      try {
+        final commaIdx = cleanPath.indexOf(',');
+        if (commaIdx != -1) {
+          final base64Data = cleanPath.substring(commaIdx + 1);
+          final bytes = base64Decode(base64Data);
+          return _wrapBorder(
+            Image.memory(
+              bytes,
+              width: width,
+              height: height,
+              fit: fit,
+              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+            ),
+          );
+        }
+      } catch (_) {}
     }
 
     Widget imageWidget;

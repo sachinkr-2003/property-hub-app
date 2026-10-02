@@ -99,10 +99,19 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   /// Update user profile fields locally and on backend
-  Future<void> updateUserProfile({String? name, String? city, String? locality, String? profileImage}) async {
+  Future<void> updateUserProfile({
+    String? name,
+    String? mobile,
+    String? email,
+    String? city,
+    String? locality,
+    String? profileImage,
+  }) async {
     if (_currentUser == null) return;
     final updated = _currentUser!.copyWith(
       name: name,
+      mobile: mobile,
+      email: email,
       city: city,
       locality: locality,
       profileImage: profileImage,
@@ -113,21 +122,31 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
 
     // Sync to backend
-    await ApiService.updateProfile(
+    final remoteUser = await ApiService.updateProfile(
       token: updated.token,
       name: name,
+      mobile: mobile,
+      email: email,
       city: city,
       locality: locality,
       profileImage: profileImage,
     );
+
+    if (remoteUser != null) {
+      _currentUser = remoteUser;
+      await StorageService.saveUserSession(remoteUser.toJson());
+      await StorageService.saveUserProfile(remoteUser.name, remoteUser.mobile);
+      notifyListeners();
+    }
   }
 
   /// Uploads and updates the user's profile image
-  Future<void> uploadProfileImage(String imagePath) async {
-    if (_currentUser == null) return;
+  Future<String?> uploadProfileImage(String imagePath) async {
+    if (_currentUser == null) return null;
     final uploadedUrl = await ApiService.uploadSingleFile(imagePath);
     if (uploadedUrl != null) {
       await updateUserProfile(profileImage: uploadedUrl);
+      return uploadedUrl;
     } else {
       throw Exception('Failed to upload image');
     }
@@ -250,6 +269,11 @@ class AppStateProvider extends ChangeNotifier {
 
   List<Property> get filteredProperties {
     return _properties.where((p) {
+      // Must be verified by admin and active before appearing to public users
+      if (!p.isVerified || p.status != 'Active') {
+        return false;
+      }
+
       final matchesSearch = _searchQuery.isEmpty ||
           p.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           p.locality.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -311,9 +335,43 @@ class AppStateProvider extends ChangeNotifier {
   void togglePropertyStatus(String propertyId) {
     final index = _properties.indexWhere((p) => p.id == propertyId);
     if (index != -1) {
-      _properties[index].status =
-          (_properties[index].status == 'Active') ? 'Paused' : 'Active';
+      final newStatus = (_properties[index].status == 'Active') ? 'Paused' : 'Active';
+      _properties[index].status = newStatus;
       notifyListeners();
+
+      // Live backend sync
+      ApiService.updatePropertyStatus(propertyId, newStatus).then((ok) {
+        if (ok) {
+          debugPrint('[AppStateProvider] Synced property $propertyId status to $newStatus in MongoDB');
+        }
+      });
+    }
+  }
+
+  void deleteProperty(String propertyId) {
+    _properties.removeWhere((p) => p.id == propertyId);
+    notifyListeners();
+
+    // Live backend sync
+    ApiService.deleteProperty(propertyId).then((ok) {
+      if (ok) {
+        debugPrint('[AppStateProvider] Deleted property $propertyId from MongoDB');
+      }
+    });
+  }
+
+  void updateProperty(Property updated) {
+    final index = _properties.indexWhere((p) => p.id == updated.id);
+    if (index != -1) {
+      _properties[index] = updated;
+      notifyListeners();
+
+      // Live backend sync
+      ApiService.updateProperty(updated.id, updated.toJson()).then((res) {
+        if (res != null) {
+          debugPrint('[AppStateProvider] Synced updated property ${updated.id} in MongoDB');
+        }
+      });
     }
   }
 
@@ -325,7 +383,7 @@ class AppStateProvider extends ChangeNotifier {
     final index = _properties.indexWhere((p) => p.id == propertyId);
     if (index != -1) {
       final old = _properties[index];
-      _properties[index] = Property(
+      final updated = Property(
         id: old.id,
         title: old.title,
         type: old.type,
@@ -351,7 +409,7 @@ class AppStateProvider extends ChangeNotifier {
         isFavorite: old.isFavorite,
         status: old.status,
       );
-      notifyListeners();
+      updateProperty(updated);
     }
   }
 
@@ -392,8 +450,117 @@ class AppStateProvider extends ChangeNotifier {
     });
   }
 
-  // Bachelor Services List
-  final List<BachelorService> _services = [];
+  // Bachelor Services List with robust defaults
+  final List<BachelorService> _services = [
+    BachelorService(
+      id: 'srv-1',
+      title: 'Tiffin & Home Mess',
+      category: 'Food',
+      priceStarting: '₹ 120/meal',
+      rating: 4.8,
+      reviewsCount: 320,
+      icon: BachelorService.getIconForCategory('Food'),
+      color: BachelorService.getColorForCategory('Food'),
+      description: 'Hygienic home-cooked north & south Indian meals delivered hot to your doorstep twice daily.',
+      features: ['2 Daily Meals', 'Customizable Menu', 'Free Delivery', 'Trial Available'],
+    ),
+    BachelorService(
+      id: 'srv-2',
+      title: 'Laundry & Dry Clean',
+      category: 'Laundry',
+      priceStarting: '₹ 15/cloth',
+      rating: 4.6,
+      reviewsCount: 215,
+      icon: BachelorService.getIconForCategory('Laundry'),
+      color: BachelorService.getColorForCategory('Laundry'),
+      description: 'Quick wash, press, and folding service with free pickup and drop within 24 hours.',
+      features: ['Pickup & Drop', 'Fabric Care', '24h Delivery', 'Iron Included'],
+    ),
+    BachelorService(
+      id: 'srv-3',
+      title: 'Daily Cook & Maid',
+      category: 'Maid',
+      priceStarting: '₹ 1,500/mo',
+      rating: 4.7,
+      reviewsCount: 180,
+      icon: BachelorService.getIconForCategory('Maid'),
+      color: BachelorService.getColorForCategory('Maid'),
+      description: 'Police-verified background checked domestic cooks and cleaning professionals for bachelor flats.',
+      features: ['Police Verified', 'Flexible Timings', 'Trial Days', 'Replacement Guarantee'],
+    ),
+    BachelorService(
+      id: 'srv-4',
+      title: 'Deep Home Cleaning',
+      category: 'Cleaning',
+      priceStarting: '₹ 499',
+      rating: 4.9,
+      reviewsCount: 140,
+      icon: BachelorService.getIconForCategory('Cleaning'),
+      color: BachelorService.getColorForCategory('Cleaning'),
+      description: 'Professional deep cleaning for kitchen, bathroom, bedroom, and move-in sanitization.',
+      features: ['Eco-friendly Chemicals', 'Full Flat Sanitize', 'Kitchen Degrease', 'Trained Crew'],
+    ),
+    BachelorService(
+      id: 'srv-5',
+      title: 'Electrician Services',
+      category: 'Electrician',
+      priceStarting: '₹ 149',
+      rating: 4.5,
+      reviewsCount: 95,
+      icon: BachelorService.getIconForCategory('Electrician'),
+      color: BachelorService.getColorForCategory('Electrician'),
+      description: 'Fast doorstep electrician for fan, light, geyser, wiring, and appliance setup.',
+      features: ['30 Min Arrival', 'Standard Rates', 'Safety Inspected', 'Warranty on Repair'],
+    ),
+    BachelorService(
+      id: 'srv-6',
+      title: 'Plumber Services',
+      category: 'Plumber',
+      priceStarting: '₹ 149',
+      rating: 4.6,
+      reviewsCount: 110,
+      icon: BachelorService.getIconForCategory('Plumber'),
+      color: BachelorService.getColorForCategory('Plumber'),
+      description: 'Leak repair, tap fitting, RO water purifier setup, and bathroom drainage resolution.',
+      features: ['Leak Proof Guarantee', 'No Hidden Fees', 'Genuine Parts', 'Immediate Visit'],
+    ),
+    BachelorService(
+      id: 'srv-7',
+      title: 'Packers & Movers',
+      category: 'Moving',
+      priceStarting: '₹ 999',
+      rating: 4.8,
+      reviewsCount: 88,
+      icon: BachelorService.getIconForCategory('Moving'),
+      color: BachelorService.getColorForCategory('Moving'),
+      description: 'Budget-friendly local room shifting and luggage transport for students and bachelors.',
+      features: ['Safe Transit', 'Packing Materials', 'Loading & Unloading', 'Dedicated Mini Truck'],
+    ),
+    BachelorService(
+      id: 'srv-8',
+      title: 'Broadband & Wi-Fi',
+      category: 'Wifi',
+      priceStarting: '₹ 299/mo',
+      rating: 4.5,
+      reviewsCount: 165,
+      icon: BachelorService.getIconForCategory('Wifi'),
+      color: BachelorService.getColorForCategory('Wifi'),
+      description: 'Same-day fiber broadband installation with unlimited high-speed internet and free router.',
+      features: ['Free Router Setup', 'Up to 200 Mbps', 'Unlimited Data', 'Zero Installation Fee'],
+    ),
+    BachelorService(
+      id: 'srv-9',
+      title: 'Carpenter & Handyman',
+      category: 'Carpenter',
+      priceStarting: '₹ 199',
+      rating: 4.4,
+      reviewsCount: 76,
+      icon: BachelorService.getIconForCategory('Carpenter'),
+      color: BachelorService.getColorForCategory('Carpenter'),
+      description: 'Door lock repair, study table assembly, bed fixing, and modular furniture setup.',
+      features: ['Doorstep Service', 'Skilled Handyman', 'Quick Assembly', 'Fair Pricing'],
+    ),
+  ];
 
   bool _isLoadingServices = false;
   bool get isLoadingServices => _isLoadingServices;
@@ -434,8 +601,61 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  // Used Items List (Marketplace)
-  final List<UsedItem> _usedItems = [];
+  // Used Items List (Marketplace) with robust defaults
+  final List<UsedItem> _usedItems = [
+    UsedItem(
+      id: 'ITEM-301',
+      title: 'Solid Sheesham Wood Queen Bed with Storage',
+      category: 'Furniture',
+      price: 11500,
+      condition: 'Like New (1 yr used)',
+      imageUrl: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=400&q=80',
+      location: 'Mahanagar, Lucknow',
+      sellerName: 'Tanmay Gupta (Tenant)',
+      sellerPhone: '+91 98190 77123',
+      description: 'Well-maintained solid wood queen bed with hydraulic storage box. Moving out soon.',
+      postedAt: DateTime.now().subtract(const Duration(days: 2)),
+    ),
+    UsedItem(
+      id: 'ITEM-302',
+      title: 'LG 260L 3-Star Inverter Frost-Free Refrigerator',
+      category: 'Appliances',
+      price: 13500,
+      condition: 'Good Condition',
+      imageUrl: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=400&q=80',
+      location: 'Gomti Nagar, Lucknow',
+      sellerName: 'Neha Rastogi',
+      sellerPhone: '+91 94151 33445',
+      description: 'Works perfectly, silent operation and very energy efficient. Bill available.',
+      postedAt: DateTime.now().subtract(const Duration(days: 4)),
+    ),
+    UsedItem(
+      id: 'ITEM-304',
+      title: 'Bajaj Majesty 16L Microwave Oven',
+      category: 'Appliances',
+      price: 2400,
+      condition: 'Like New',
+      imageUrl: 'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?auto=format&fit=crop&w=400&q=80',
+      location: 'Aliganj, Lucknow',
+      sellerName: 'Vikram Joshi',
+      sellerPhone: '+91 94500 11223',
+      description: 'Hardly used for 6 months. Clean, includes baking tray and wire rack.',
+      postedAt: DateTime.now().subtract(const Duration(days: 5)),
+    ),
+    UsedItem(
+      id: 'ITEM-305',
+      title: 'Modern Study Table with Bookshelf',
+      category: 'Study',
+      price: 1800,
+      condition: 'Good Condition',
+      imageUrl: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=400&q=80',
+      location: 'Indira Nagar, Lucknow',
+      sellerName: 'Aman Verma',
+      sellerPhone: '+91 98390 12345',
+      description: 'Engineered wood study desk with 3 shelves for books and laptop wire hole.',
+      postedAt: DateTime.now().subtract(const Duration(days: 1)),
+    ),
+  ];
 
   bool _isLoadingUsedItems = false;
   bool get isLoadingUsedItems => _isLoadingUsedItems;

@@ -1,4 +1,3 @@
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +10,7 @@ import '../visits/my_visits_screen.dart';
 import '../compare/property_compare_screen.dart';
 import '../calculators/financial_calculator_screen.dart';
 import '../agreement/rent_agreement_generator_screen.dart';
+import 'edit_profile_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -20,40 +20,6 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  bool _isUploading = false;
-
-  Future<void> _pickAndUploadImage(AppStateProvider state) async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-      if (pickedFile == null) return;
-
-      setState(() {
-        _isUploading = true;
-      });
-
-      await state.uploadProfileImage(pickedFile.path);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile image updated successfully!')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update image: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = Provider.of<AppStateProvider>(context);
@@ -68,6 +34,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             fontSize: 18,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_note_rounded, color: AppTheme.primary, size: 24),
+            tooltip: 'Edit Profile',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const EditProfileScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -81,29 +61,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => _pickAndUploadImage(state),
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.primary, width: 2),
-                      ),
-                      child: ClipOval(
-                        child: _isUploading
-                            ? const Padding(
-                                padding: EdgeInsets.all(14.0),
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
-                              )
-                            : (state.currentUser?.hasProfileImage == true
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppTheme.primary, width: 2),
+                          ),
+                          child: ClipOval(
+                            child: (state.currentUser?.hasProfileImage == true
                                 ? AppImage(
                                     path: state.userProfileImage,
-                                    width: 60,
-                                    height: 60,
+                                    width: 64,
+                                    height: 64,
                                     fit: BoxFit.cover,
                                   )
                                 : Container(
@@ -114,14 +106,33 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                             ? state.userName[0].toUpperCase()
                                             : 'U',
                                         style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 22,
+                                          fontSize: 24,
                                           fontWeight: FontWeight.w800,
                                           color: AppTheme.primary,
                                         ),
                                       ),
                                     ),
                                   )),
-                      ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 11,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -149,28 +160,74 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             color: AppTheme.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryLight,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            state.userRole,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primary,
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryLight,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                state.userRole,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const EditProfileScreen(),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.edit_rounded, size: 10, color: Color(0xFF475569)),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'Edit',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, color: AppTheme.primary, size: 20),
-                    onPressed: () => _pickAndUploadImage(state),
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF94A3B8), size: 16),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -251,6 +308,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               child: Column(
                 children: [
+                  _buildMenuItem(
+                    icon: Icons.person_outline_rounded,
+                    title: 'Edit Profile Information',
+                    subtitle: 'Update name, mobile, email, and photo',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(color: Color(0xFFF1F5F9), height: 1),
                   _buildMenuItem(
                     icon: Icons.calendar_today_rounded,
                     title: 'My Scheduled Visits',

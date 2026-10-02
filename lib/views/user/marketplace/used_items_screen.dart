@@ -318,7 +318,7 @@ class UsedItemsScreen extends StatelessWidget {
     final titleController = TextEditingController();
     final priceController = TextEditingController();
     final locationController = TextEditingController(text: 'Indira Nagar, Lucknow');
-    String? pickedImagePath;
+    List<String> pickedImagePaths = [];
     String selectedCategory = 'Furniture';
     String selectedCondition = 'Good Condition';
 
@@ -331,19 +331,50 @@ class UsedItemsScreen extends StatelessWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            Future<void> pickImage(ImageSource source) async {
+            Future<void> pickSingleCameraImage() async {
               try {
                 final picker = ImagePicker();
-                final picked = await picker.pickImage(source: source, imageQuality: 80);
+                final picked = await picker.pickImage(
+                  source: ImageSource.camera,
+                  imageQuality: 80,
+                  maxWidth: 1600,
+                  maxHeight: 1600,
+                );
                 if (picked != null) {
                   setModalState(() {
-                    pickedImagePath = picked.path;
+                    pickedImagePaths.add(picked.path);
                   });
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error picking image: $e')),
+                    SnackBar(content: Text('Error taking photo: $e')),
+                  );
+                }
+              }
+            }
+
+            Future<void> pickMultiGalleryImages() async {
+              try {
+                final picker = ImagePicker();
+                final pickedList = await picker.pickMultiImage(
+                  imageQuality: 80,
+                  maxWidth: 1600,
+                  maxHeight: 1600,
+                );
+                if (pickedList.isNotEmpty) {
+                  setModalState(() {
+                    for (final p in pickedList) {
+                      if (!pickedImagePaths.contains(p.path)) {
+                        pickedImagePaths.add(p.path);
+                      }
+                    }
+                  });
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error picking images: $e')),
                   );
                 }
               }
@@ -359,19 +390,26 @@ class UsedItemsScreen extends StatelessWidget {
                   child: Wrap(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.primary),
-                        title: Text('Take Photo with Camera', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                        leading: const Icon(Icons.photo_library_rounded, color: AppTheme.primary),
+                        title: Text(
+                          'Choose Multiple from Gallery (Mark & Select)',
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: const Text('Tap & checkmark multiple photos'),
                         onTap: () {
                           Navigator.pop(ctx);
-                          pickImage(ImageSource.camera);
+                          pickMultiGalleryImages();
                         },
                       ),
                       ListTile(
-                        leading: const Icon(Icons.photo_library_rounded, color: AppTheme.primary),
-                        title: Text('Choose from Gallery', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                        leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.primary),
+                        title: Text(
+                          'Take Photo with Camera',
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                        ),
                         onTap: () {
                           Navigator.pop(ctx);
-                          pickImage(ImageSource.gallery);
+                          pickSingleCameraImage();
                         },
                       ),
                     ],
@@ -411,34 +449,124 @@ class UsedItemsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
 
-                    // Image Picker Box
-                    if (pickedImagePath != null)
-                      Stack(
+                    // Multi-Image Picker Display
+                    if (pickedImagePaths.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: AppImage(
-                              path: pickedImagePath!,
-                              height: 130,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: CircleAvatar(
-                              radius: 16,
-                              backgroundColor: Colors.black.withOpacity(0.6),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.close, size: 16, color: Colors.white),
-                                onPressed: () {
-                                  setModalState(() {
-                                    pickedImagePath = null;
-                                  });
-                                },
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${pickedImagePaths.length} Photos Selected',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
                               ),
+                              GestureDetector(
+                                onTap: () {
+                                  setModalState(() => pickedImagePaths.clear());
+                                },
+                                child: Text(
+                                  'Clear All',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 95,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: pickedImagePaths.length + 1,
+                              separatorBuilder: (context, index) => const SizedBox(width: 10),
+                              itemBuilder: (context, idx) {
+                                if (idx == pickedImagePaths.length) {
+                                  return InkWell(
+                                    onTap: showImageSourcePicker,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      width: 85,
+                                      height: 95,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryLight.withOpacity(0.4),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: AppTheme.primary.withOpacity(0.35)),
+                                      ),
+                                      child: const Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.add_photo_alternate_rounded, color: AppTheme.primary, size: 24),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Add More',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppTheme.primary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final imgPath = pickedImagePaths[idx];
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: AppImage(
+                                        path: imgPath,
+                                        width: 95,
+                                        height: 95,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setModalState(() {
+                                            pickedImagePaths.removeAt(idx);
+                                          });
+                                        },
+                                        child: CircleAvatar(
+                                          radius: 11,
+                                          backgroundColor: Colors.black.withOpacity(0.7),
+                                          child: const Icon(Icons.close, size: 13, color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                    if (idx == 0)
+                                      Positioned(
+                                        bottom: 4,
+                                        left: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primary,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'Cover',
+                                            style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -458,14 +586,22 @@ class UsedItemsScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.add_a_photo_rounded, size: 30, color: AppTheme.primary),
+                              const Icon(Icons.add_photo_alternate_rounded, size: 30, color: AppTheme.primary),
                               const SizedBox(height: 6),
                               Text(
-                                'Add Photo (Camera / Gallery)',
+                                'Add Photos (Mark & Select Multiple)',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: AppTheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Choose multiple from Gallery or Camera',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
                                 ),
                               ),
                             ],
@@ -483,30 +619,45 @@ class UsedItemsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
 
+                    // Price & Condition Row (Fixed 39px overflow)
                     Row(
                       children: [
                         Expanded(
+                          flex: 5,
                           child: TextField(
                             controller: priceController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               labelText: 'Price (₹)',
-                              prefixIcon: Icon(Icons.currency_rupee_rounded, size: 20),
+                              prefixIcon: Icon(Icons.currency_rupee_rounded, size: 18),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
+                          flex: 6,
                           child: DropdownButtonFormField<String>(
                             value: selectedCondition,
+                            isExpanded: true, // Prevents overflow
                             decoration: const InputDecoration(
                               labelText: 'Condition',
-                              prefixIcon: Icon(Icons.thumb_up_alt_outlined, size: 20),
+                              prefixIcon: Icon(Icons.thumb_up_alt_outlined, size: 18),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'Like New', child: Text('Like New')),
-                              DropdownMenuItem(value: 'Good Condition', child: Text('Good Condition')),
-                              DropdownMenuItem(value: 'Fair', child: Text('Fair')),
+                              DropdownMenuItem(
+                                value: 'Like New',
+                                child: Text('Like New', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Good Condition',
+                                child: Text('Good Condition', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Fair',
+                                child: Text('Fair', overflow: TextOverflow.ellipsis),
+                              ),
                             ],
                             onChanged: (val) {
                               if (val != null) {
@@ -534,10 +685,11 @@ class UsedItemsScreen extends StatelessWidget {
                           final price = double.tryParse(priceController.text) ?? 1500;
 
                           // Upload image to backend if picked
-                          String finalImage = pickedImagePath != null
-                              ? (await ApiService.uploadSingleFile(pickedImagePath!) ??
-                                  pickedImagePath!)
-                              : 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80';
+                          String finalImage = 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80';
+                          if (pickedImagePaths.isNotEmpty) {
+                            final uploaded = await ApiService.uploadSingleFile(pickedImagePaths.first);
+                            finalImage = uploaded ?? pickedImagePaths.first;
+                          }
 
                           state.addUsedItem(
                             UsedItem(

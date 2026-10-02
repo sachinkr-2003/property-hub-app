@@ -61,7 +61,14 @@ class Property {
       }
       return img;
     }
-    return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80';
+    // High-resolution architectural fallback based on property type
+    final t = type.toLowerCase();
+    if (t.contains('villa') || t.contains('house')) {
+      return 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=900&q=80';
+    } else if (t.contains('room') || t.contains('pg')) {
+      return 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=900&q=80';
   }
 
   List<String> get safeImages {

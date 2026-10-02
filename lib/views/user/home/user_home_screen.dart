@@ -652,22 +652,70 @@ class UserHomeScreen extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Horizontal Carousel of Featured Verified Properties
-                SizedBox(
-                  height: 275,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: state.properties.length,
-                    itemBuilder: (context, index) {
-                      final property = state.properties[index];
-                      return _buildFeaturedPropertyCard(context, property, state);
-                    },
-                  ),
-                ),
+                () {
+                  final verifiedProperties = state.properties.where((p) => p.isVerified && p.status == 'Active').toList();
+                  if (verifiedProperties.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryLight.withOpacity(0.4),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.home_work_outlined, size: 32, color: AppTheme.primary),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'No verified properties listed yet',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Properties will appear here once verified by our admin team.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return SizedBox(
+                    height: 275,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: verifiedProperties.length,
+                      itemBuilder: (context, index) {
+                        final property = verifiedProperties[index];
+                        return _buildFeaturedPropertyCard(context, property, state);
+                      },
+                    ),
+                  );
+                }(),
 
                 const SizedBox(height: 24),
 
-                // Bachelor Services Quick Strip (Screen 8 Preview)
+                // Bachelor Services Quick Strip
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
@@ -691,7 +739,9 @@ class UserHomeScreen extends StatelessWidget {
                           );
                         },
                         child: Text(
-                          'View All (9)',
+                          state.services.isNotEmpty
+                              ? 'View All (${state.services.length})'
+                              : 'Explore Services',
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
@@ -703,86 +753,144 @@ class UserHomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 105,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: 4,
-                    itemBuilder: (context, index) {
-                      final srv = state.services[index];
-                      return Container(
-                        width: 150,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        padding: const EdgeInsets.all(12),
+                if (state.services.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ServicesScreen()),
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Row(
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: srv.color.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(srv.icon, color: srv.color, size: 20),
-                                ),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.star, size: 12, color: AppTheme.starAmber),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '${srv.rating}',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryLight,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.delivery_dining_rounded, color: AppTheme.primary, size: 24),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Bachelor Services (Tiffin, Laundry, Cook)',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textPrimary,
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  srv.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                    color: AppTheme.textPrimary,
                                   ),
-                                ),
-                                Text(
-                                  srv.priceStarting,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 10,
-                                    color: AppTheme.textSecondary,
+                                  Text(
+                                    'Tap to explore doorstep services for students & bachelors.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: AppTheme.textSecondary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textMuted),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 105,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: state.services.length > 4 ? 4 : state.services.length,
+                      itemBuilder: (context, index) {
+                        final srv = state.services[index];
+                        return Container(
+                          width: 150,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: srv.color.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(srv.icon, color: srv.color, size: 20),
+                                  ),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.star, size: 12, color: AppTheme.starAmber),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        '${srv.rating}',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    srv.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      color: AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    srv.priceStarting,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
 
                 const SizedBox(height: 24),
 
-                // Roommate Finder Strip (Screen 7 Preview)
+                // Roommate Finder Strip
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
@@ -818,13 +926,19 @@ class UserHomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: state.roommates.take(2).map((rm) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
+                if (state.roommates.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RoommateFinderScreen()),
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -832,98 +946,154 @@ class UserHomeScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              radius: 26,
-                              backgroundImage: NetworkImage(rm.avatarUrl),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFEFF6FF),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.people_outline_rounded, color: Color(0xFF2563EB), size: 24),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        rm.name,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14,
-                                          color: AppTheme.textPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const Icon(Icons.verified, size: 14, color: AppTheme.verifiedGreen),
-                                    ],
-                                  ),
                                   Text(
-                                    '${rm.age} yrs • ${rm.profession}',
+                                    'Looking for a flatmate or room?',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textPrimary,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.surfaceColor,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Budget: ${rm.budgetRange}',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppTheme.primary,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        rm.preferredLocation,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 10,
-                                          color: AppTheme.textMuted,
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    'Connect with verified flatmates with 0% brokerage.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      color: AppTheme.textSecondary,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: AppTheme.primary),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const RoommateFinderScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'View',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textMuted),
                           ],
                         ),
-                      );
-                    }).toList(),
+                      ),
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: state.roommates.take(2).map((rm) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              ClipOval(
+                                child: AppImage(
+                                  path: rm.avatarUrl,
+                                  width: 52,
+                                  height: 52,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          rm.name,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                            color: AppTheme.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Icon(Icons.verified, size: 14, color: AppTheme.verifiedGreen),
+                                      ],
+                                    ),
+                                    Text(
+                                      '${rm.age} yrs • ${rm.profession}',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.surfaceColor,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'Budget: ${rm.budgetRange}',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          rm.preferredLocation,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 10,
+                                            color: AppTheme.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppTheme.primary),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const RoommateFinderScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'View',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
 
                 const SizedBox(height: 30),
               ],

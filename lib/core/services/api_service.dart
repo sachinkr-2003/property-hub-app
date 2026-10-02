@@ -280,10 +280,12 @@ class ApiService {
     return null;
   }
 
-  /// Update profile fields
-  static Future<bool> updateProfile({
+  /// Update profile fields (name, mobile, email, city, locality, profileImage)
+  static Future<UserSession?> updateProfile({
     required String token,
     String? name,
+    String? mobile,
+    String? email,
     String? city,
     String? locality,
     String? profileImage,
@@ -291,6 +293,8 @@ class ApiService {
     try {
       final body = <String, dynamic>{
         'name': ?name,
+        'mobile': ?mobile,
+        'email': ?email,
         'city': ?city,
         'locality': ?locality,
         'profileImage': ?profileImage,
@@ -301,12 +305,19 @@ class ApiService {
             headers: _authHeaders(token),
             body: json.encode(body),
           )
-          .timeout(const Duration(seconds: 10));
-      return res.statusCode == 200;
+          .timeout(const Duration(seconds: 15));
+      final decoded = json.decode(res.body);
+      if (res.statusCode == 200 && decoded['success'] == true) {
+        return UserSession.fromJson(
+          {'user': decoded['data']},
+          token: token,
+        );
+      }
+      debugPrint('[Auth] updateProfile failed: ${decoded['message']}');
     } catch (e) {
       debugPrint('[Auth] updateProfile error: $e');
     }
-    return false;
+    return null;
   }
 
   static String resolveMediaUrl(String? url) {
@@ -526,6 +537,65 @@ class ApiService {
       debugPrint('[ApiService] createProperty warning: $e');
     }
     return null;
+  }
+
+  /// Update full property details in MongoDB
+  static Future<Property?> updateProperty(String id, Map<String, dynamic> data) async {
+    try {
+      final uri = Uri.parse('$baseUrl/properties/$id');
+      final response = await http.patch(
+        uri,
+        headers: _headers,
+        body: json.encode(data),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded['success'] == true && decoded['data'] != null) {
+          return Property.fromJson(decoded['data'] as Map<String, dynamic>);
+        }
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updateProperty warning: $e');
+    }
+    return null;
+  }
+
+  /// Update property status (Active, Paused, etc.) in MongoDB
+  static Future<bool> updatePropertyStatus(String id, String status) async {
+    try {
+      final uri = Uri.parse('$baseUrl/properties/$id/status');
+      final response = await http.patch(
+        uri,
+        headers: _headers,
+        body: json.encode({'status': status}),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint('[ApiService] updatePropertyStatus warning: $e');
+    }
+    return false;
+  }
+
+  /// Delete property listing from MongoDB
+  static Future<bool> deleteProperty(String id) async {
+    try {
+      final uri = Uri.parse('$baseUrl/properties/$id');
+      final response = await http.delete(
+        uri,
+        headers: _headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint('[ApiService] deleteProperty warning: $e');
+    }
+    return false;
   }
 
   // ==========================================
