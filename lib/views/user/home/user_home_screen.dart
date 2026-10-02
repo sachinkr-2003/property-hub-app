@@ -28,7 +28,7 @@ class UserHomeScreen extends StatelessWidget {
         child: RefreshIndicator(
           color: AppTheme.primary,
           onRefresh: () async {
-            await state.loadLivePropertiesFromBackend();
+            await state.loadAllLiveData();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -363,7 +363,7 @@ class UserHomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const PropertyListScreen(),
+                                  builder: (_) => const PropertyListScreen(initialFilter: 'Rent'),
                                 ),
                               );
                             },
@@ -378,7 +378,7 @@ class UserHomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const PropertyListScreen(),
+                                  builder: (_) => const PropertyListScreen(initialFilter: 'Buy'),
                                 ),
                               );
                             },
@@ -393,7 +393,7 @@ class UserHomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const PropertyListScreen(),
+                                  builder: (_) => const PropertyListScreen(initialFilter: 'PG'),
                                 ),
                               );
                             },
@@ -408,7 +408,7 @@ class UserHomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const PropertyListScreen(),
+                                  builder: (_) => const PropertyListScreen(initialFilter: 'Room'),
                                 ),
                               );
                             },

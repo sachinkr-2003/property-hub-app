@@ -26,51 +26,66 @@ class MyVisitsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: visits.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryLight.withOpacity(0.5),
-                      shape: BoxShape.circle,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppTheme.primary,
+          onRefresh: () async {
+            await state.loadLiveVisitsFromBackend();
+          },
+          child: visits.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryLight.withOpacity(0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.calendar_month_outlined,
+                              size: 48,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No Property Visits Scheduled Yet',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Schedule a free visit on any direct owner property!',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.calendar_month_outlined,
-                      size: 48,
-                      color: AppTheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Property Visits Scheduled Yet',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Schedule a free visit on any direct owner property!',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: visits.length,
-              itemBuilder: (context, index) {
-                final visit = visits[index];
-                return _buildVisitPassCard(context, visit, state);
-              },
-            ),
+                  ],
+                )
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  itemCount: visits.length,
+                  itemBuilder: (context, index) {
+                    final visit = visits[index];
+                    return _buildVisitPassCard(context, visit, state);
+                  },
+                ),
+        ),
+      ),
     );
   }
 

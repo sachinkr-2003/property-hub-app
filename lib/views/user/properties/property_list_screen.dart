@@ -9,20 +9,32 @@ import '../compare/property_compare_screen.dart';
 import 'property_detail_screen.dart';
 
 class PropertyListScreen extends StatefulWidget {
-  const PropertyListScreen({super.key});
+  final String? initialFilter;
+  const PropertyListScreen({super.key, this.initialFilter});
 
   @override
   State<PropertyListScreen> createState() => _PropertyListScreenState();
 }
 
 class _PropertyListScreenState extends State<PropertyListScreen> {
-  final List<String> _filters = ['All', 'Rent', 'Buy', 'PG', '1 BHK', '2 BHK', '3 BHK'];
-  String _activeFilter = 'All';
+  final List<String> _filters = ['All', 'Rent', 'Buy', 'PG', 'Room', '1 BHK', '2 BHK', '3 BHK'];
+  late String _activeFilter;
   String _searchQuery = '';
   double _maxPrice = 100000;
   String _furnishingFilter = 'All';
   String _tenantFilter = 'All';
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _activeFilter = widget.initialFilter ?? 'All';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppStateProvider>().loadLivePropertiesFromBackend();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -34,9 +46,12 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
   Widget build(BuildContext context) {
     final state = Provider.of<AppStateProvider>(context);
     final properties = state.properties.where((p) {
+      if (p.status == 'Rejected') return false;
+
       if (_activeFilter == 'Rent' && p.listingType != 'Rent') return false;
       if (_activeFilter == 'Buy' && p.listingType != 'Buy') return false;
-      if (_activeFilter == 'PG' && p.type != 'PG') return false;
+      if (_activeFilter == 'PG' && p.type.toLowerCase() != 'pg') return false;
+      if (_activeFilter == 'Room' && p.type.toLowerCase() != 'room') return false;
       if (_activeFilter == '1 BHK' && p.bhk != 1) return false;
       if (_activeFilter == '2 BHK' && p.bhk != 2) return false;
       if (_activeFilter == '3 BHK' && p.bhk != 3) return false;
@@ -49,7 +64,8 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
         if (!matches) return false;
       }
 
-      if (p.price > _maxPrice) return false;
+      // 100,000 is 'Any Budget' on the slider. Only cap price if user explicitly drags below 100k
+      if (_maxPrice < 100000 && p.price > _maxPrice) return false;
 
       if (_furnishingFilter != 'All' &&
           !p.furnishing.toLowerCase().contains(_furnishingFilter.toLowerCase())) {
@@ -192,15 +208,113 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
             ),
           ),
 
+          if (state.isLoadingProperties)
+            const LinearProgressIndicator(
+              color: AppTheme.primary,
+              backgroundColor: Colors.transparent,
+              minHeight: 2,
+            ),
+
           // Properties List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              itemCount: properties.length,
-              itemBuilder: (context, index) {
-                final property = properties[index];
-                return _buildPropertyListItem(context, property, state);
-              },
+            child: RefreshIndicator(
+              color: AppTheme.primary,
+              onRefresh: () => state.loadLivePropertiesFromBackend(),
+              child: properties.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withOpacity(0.08),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.filter_alt_off_rounded,
+                                  size: 48,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No Properties Found',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 17,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 40),
+                                child: Text(
+                                  _activeFilter != 'All'
+                                      ? 'No properties match the "$_activeFilter" filter. Try switching to "All" or pull down to refresh.'
+                                      : 'No verified properties found at this moment. Pull down to refresh.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              if (_activeFilter != 'All' ||
+                                  _searchQuery.isNotEmpty ||
+                                  _furnishingFilter != 'All' ||
+                                  _tenantFilter != 'All')
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _activeFilter = 'All';
+                                      _searchQuery = '';
+                                      _searchController.clear();
+                                      _maxPrice = 100000;
+                                      _furnishingFilter = 'All';
+                                      _tenantFilter = 'All';
+                                    });
+                                  },
+                                  icon: const Icon(Icons.clear_all_rounded, size: 18),
+                                  label: Text(
+                                    'Clear Filters & View All',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      itemCount: properties.length,
+                      itemBuilder: (context, index) {
+                        final property = properties[index];
+                        return _buildPropertyListItem(context, property, state);
+                      },
+                    ),
             ),
           ),
         ],
@@ -369,41 +483,41 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
                   const Divider(color: Color(0xFFF1F5F9), height: 1),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 12,
-                            backgroundColor: AppTheme.primaryLight,
-                            child: Icon(Icons.person, size: 14, color: AppTheme.primary),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            property.ownerName,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textPrimary,
+                      // Owner details with Expanded to prevent text push
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 12,
+                              backgroundColor: AppTheme.primaryLight,
+                              child: Icon(Icons.person, size: 14, color: AppTheme.primary),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                property.ownerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Wrap(
-                        spacing: 6,
+                      const SizedBox(width: 8),
+
+                      // Compact responsive action buttons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.compare_arrows_rounded, size: 14, color: AppTheme.textSecondary),
-                            label: Text(
-                              'Compare',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
-                            ),
-                            onPressed: () {
+                          // Compare Icon Button
+                          InkWell(
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -411,37 +525,82 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
                                 ),
                               );
                             },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.compare_arrows_rounded,
+                                size: 15,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
                           ),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppTheme.primary),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: AppTheme.primary),
-                            label: Text(
-                              'Chat',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primary),
-                            ),
-                            onPressed: () {
+                          const SizedBox(width: 6),
+
+                          // Chat Button
+                          InkWell(
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (_) => PropertyDetailScreen(property: property)),
                               );
                             },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppTheme.primary),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.chat_bubble_outline_rounded, size: 13, color: AppTheme.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Chat',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
+                          const SizedBox(width: 6),
+
+                          // Call Button
+                          InkWell(
+                            onTap: () => LauncherUtils.makePhoneCall(context, property.ownerPhone),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.call_rounded, size: 13, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Call',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            icon: const Icon(Icons.call_rounded, size: 14, color: Colors.white),
-                            label: Text(
-                              'Call',
-                              style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                            onPressed: () => LauncherUtils.makePhoneCall(context, property.ownerPhone),
                           ),
                         ],
                       ),

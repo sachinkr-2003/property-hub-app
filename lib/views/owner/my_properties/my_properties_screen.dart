@@ -153,53 +153,63 @@ class MyPropertiesScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: myProps.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        child: RefreshIndicator(
+          color: AppTheme.primary,
+          onRefresh: () => state.loadLivePropertiesFromBackend(),
+          child: myProps.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   children: [
-                    const Icon(
-                      Icons.home_work_outlined,
-                      size: 64,
-                      color: AppTheme.textMuted,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No properties listed yet',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Post your first flat or room with 0% brokerage',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AddPropertyWizardScreen(),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.18),
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.home_work_outlined,
+                            size: 64,
+                            color: AppTheme.textMuted,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('List Property Now'),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No properties listed yet',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Post your first flat or room with 0% brokerage',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AddPropertyWizardScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('List Property Now'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: myProps.length,
-                itemBuilder: (context, index) {
+                )
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  itemCount: myProps.length,
+                  itemBuilder: (context, index) {
                   final prop = myProps[index];
                   final isPaused = prop.status == 'Paused';
 
@@ -392,6 +402,7 @@ class MyPropertiesScreen extends StatelessWidget {
                   );
                 },
               ),
+          ),
       ),
     );
   }

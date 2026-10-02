@@ -169,6 +169,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       final uploadedUrls = await ApiService.uploadPropertyImages(uploadPaths);
       if (uploadedUrls.isNotEmpty) {
         finalImages = uploadedUrls;
+      } else {
+        // Retain user's actual picked images if backend upload had an issue
+        finalImages = uploadPaths;
       }
     }
 

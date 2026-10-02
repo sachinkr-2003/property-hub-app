@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../models/property_model.dart';
 import '../../models/service_model.dart';
 import '../../models/used_item_model.dart';
@@ -324,12 +325,38 @@ class ApiService {
   // MULTIPART DOCUMENT & IMAGE UPLOADS
   // ==========================================
 
+  static MediaType _getMediaType(String filePath) {
+    final ext = filePath.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return MediaType('image', 'png');
+      case 'webp':
+        return MediaType('image', 'webp');
+      case 'gif':
+        return MediaType('image', 'gif');
+      case 'pdf':
+        return MediaType('application', 'pdf');
+      case 'doc':
+        return MediaType('application', 'msword');
+      case 'docx':
+        return MediaType('application', 'vnd.openxmlformats-officedocument.wordprocessingml.document');
+      case 'jpg':
+      case 'jpeg':
+      default:
+        return MediaType('image', 'jpeg');
+    }
+  }
+
   /// Upload single general media file (selfie, chat media, avatar)
   static Future<String?> uploadSingleFile(String filePath) async {
     try {
       final uri = Uri.parse('$baseUrl/upload/single');
       final request = http.MultipartRequest('POST', uri);
-      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        filePath,
+        contentType: _getMediaType(filePath),
+      ));
 
       final streamed = await request.send().timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamed);
@@ -354,7 +381,11 @@ class ApiService {
       final request = http.MultipartRequest('POST', uri);
       for (final p in filePaths) {
         if (p.isNotEmpty && !p.startsWith('http')) {
-          request.files.add(await http.MultipartFile.fromPath('images', p));
+          request.files.add(await http.MultipartFile.fromPath(
+            'images',
+            p,
+            contentType: _getMediaType(p),
+          ));
         }
       }
 
@@ -386,10 +417,18 @@ class ApiService {
       final uri = Uri.parse('$baseUrl/upload/kyc-docs');
       final request = http.MultipartRequest('POST', uri);
       if (aadhaarPath != null && aadhaarPath.isNotEmpty && !aadhaarPath.startsWith('http')) {
-        request.files.add(await http.MultipartFile.fromPath('aadhaar', aadhaarPath));
+        request.files.add(await http.MultipartFile.fromPath(
+          'aadhaar',
+          aadhaarPath,
+          contentType: _getMediaType(aadhaarPath),
+        ));
       }
       if (panPath != null && panPath.isNotEmpty && !panPath.startsWith('http')) {
-        request.files.add(await http.MultipartFile.fromPath('pan', panPath));
+        request.files.add(await http.MultipartFile.fromPath(
+          'pan',
+          panPath,
+          contentType: _getMediaType(panPath),
+        ));
       }
 
       if (request.files.isEmpty) return result;
@@ -416,7 +455,11 @@ class ApiService {
     try {
       final uri = Uri.parse('$baseUrl/upload/deed-doc');
       final request = http.MultipartRequest('POST', uri);
-      request.files.add(await http.MultipartFile.fromPath('registry', deedPath));
+      request.files.add(await http.MultipartFile.fromPath(
+        'registry',
+        deedPath,
+        contentType: _getMediaType(deedPath),
+      ));
 
       final streamed = await request.send().timeout(const Duration(seconds: 20));
       final response = await http.Response.fromStream(streamed);

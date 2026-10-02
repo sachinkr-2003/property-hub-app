@@ -18,9 +18,15 @@ class OwnerDashboardScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
+        child: RefreshIndicator(
+          color: AppTheme.primary,
+          onRefresh: () async {
+            await state.loadAllLiveData();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top Owner Greeting & Switch Back to User Mode Button
@@ -441,6 +447,7 @@ class OwnerDashboardScreen extends StatelessWidget {
               const SizedBox(height: 30),
             ],
           ),
+        ),
         ),
       ),
     );

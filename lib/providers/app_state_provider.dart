@@ -299,6 +299,11 @@ class AppStateProvider extends ChangeNotifier {
     ApiService.createProperty(property.toJson()).then((created) {
       if (created != null) {
         debugPrint('[AppStateProvider] Successfully created property in MongoDB: ${created.id}');
+        final idx = _properties.indexWhere((p) => p.id == property.id || p.id == created.id);
+        if (idx != -1) {
+          _properties[idx] = created;
+          notifyListeners();
+        }
       }
     });
   }
@@ -467,41 +472,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Leads & Inquiries for Owner Mode
-  final List<PropertyLead> _leads = [
-    PropertyLead(
-      id: 'lead-1',
-      userName: 'Amit Sharma',
-      userPhone: '+91 98390 12345',
-      propertyTitle: 'Modern 3 BHK Luxury Flat',
-      propertyId: 'prop-1',
-      inquiryType: 'Visit Request',
-      message: 'Hello, I want to visit this 3 BHK flat tomorrow around 5 PM. Is it available?',
-      dateTime: DateTime.now().subtract(const Duration(minutes: 45)),
-      status: 'New',
-    ),
-    PropertyLead(
-      id: 'lead-2',
-      userName: 'Rohit Verma',
-      userPhone: '+91 94151 98765',
-      propertyTitle: 'Independent 2 BHK Villa / House',
-      propertyId: 'prop-2',
-      inquiryType: 'Price Query',
-      message: 'Can the rent be slightly negotiated if paid 6 months upfront?',
-      dateTime: DateTime.now().subtract(const Duration(hours: 3)),
-      status: 'Contacted',
-    ),
-    PropertyLead(
-      id: 'lead-3',
-      userName: 'Sneha Singh',
-      userPhone: '+91 99182 44332',
-      propertyTitle: 'Cozy 1 BHK Studio for Bachelors',
-      propertyId: 'prop-3',
-      inquiryType: 'General Enquiry',
-      message: 'Are two working girls allowed in this studio apartment?',
-      dateTime: DateTime.now().subtract(const Duration(hours: 6)),
-      status: 'Accepted',
-    ),
-  ];
+  final List<PropertyLead> _leads = [];
 
   List<PropertyLead> get leads => _leads;
 
@@ -519,58 +490,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Chat Threads
-  final List<ChatThread> _chats = [
-    ChatThread(
-      id: 'chat-1',
-      participantName: 'Rohit Sharma (Direct Owner)',
-      participantRole: 'Owner',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-      propertyOrItemTitle: '3 BHK Flat in Indira Nagar',
-      lastMessage: 'Yes, it is available. Would you like to visit it?',
-      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 10)),
-      unreadCount: 1,
-      isOnline: true,
-      messages: [
-        ChatMessage(
-          id: 'm1',
-          text: 'Hi, is this property still available for rent?',
-          isSender: true,
-          timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
-        ),
-        ChatMessage(
-          id: 'm2',
-          text: 'Hi! Yes, it is available. Would you like to visit it?',
-          isSender: false,
-          timestamp: DateTime.now().subtract(const Duration(minutes: 10)),
-        ),
-      ],
-    ),
-    ChatThread(
-      id: 'chat-2',
-      participantName: 'Amit Kumar',
-      participantRole: 'Roommate Match',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
-      propertyOrItemTitle: 'Roommate Inquiry (Gomti Nagar)',
-      lastMessage: 'Great, let us connect over a call tonight.',
-      lastMessageTime: DateTime.now().subtract(const Duration(hours: 2)),
-      unreadCount: 0,
-      isOnline: false,
-      messages: [
-        ChatMessage(
-          id: 'm3',
-          text: 'Hey Amit! I saw your roommate profile. Are you still looking?',
-          isSender: true,
-          timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-        ),
-        ChatMessage(
-          id: 'm4',
-          text: 'Great, let us connect over a call tonight.',
-          isSender: false,
-          timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        ),
-      ],
-    ),
-  ];
+  final List<ChatThread> _chats = [];
 
   List<ChatThread> get chats => _chats;
 
@@ -668,13 +588,13 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Owner KYC Status
-  bool isAadhaarUploaded = true;
-  bool isPanUploaded = true;
-  bool isPhotoUploaded = true;
+  bool isAadhaarUploaded = false;
+  bool isPanUploaded = false;
+  bool isPhotoUploaded = false;
   String? aadhaarDocUrl;
   String? panDocUrl;
   String? selfiePhotoUrl;
-  String kycStatus = 'Verified'; // Verified, Pending
+  String kycStatus = 'Unverified'; // Verified, Pending, Unverified
 
   Future<bool> submitKyc({
     String name = 'Rajesh Kumar',
@@ -724,22 +644,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Visit Bookings (Digital Visit Passes)
-  final List<VisitBooking> _visitBookings = [
-    VisitBooking(
-      id: 'vis-101',
-      propertyId: 'prop-1',
-      propertyTitle: 'Spacious 2 BHK Semi-Furnished Flat',
-      propertyAddress: 'Sector 14, Indira Nagar, Lucknow',
-      propertyImage: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80',
-      ownerName: 'Rajesh Kumar',
-      ownerPhone: '+91 98765 43210',
-      visitDate: 'Tomorrow, 11:30 AM',
-      timeSlot: 'Morning (10:00 AM - 1:00 PM)',
-      passCode: 'PH-VIS-4921',
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-      status: 'Confirmed',
-    ),
-  ];
+  final List<VisitBooking> _visitBookings = [];
 
   bool _isLoadingVisits = false;
   bool get isLoadingVisits => _isLoadingVisits;

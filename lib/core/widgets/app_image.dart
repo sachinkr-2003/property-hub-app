@@ -46,13 +46,40 @@ class AppImage extends StatelessWidget {
 
     Widget imageWidget;
 
-    // 1. Relative backend URL (e.g. /uploads/properties/abc.jpg)
+    // 1. Check if it's an existing local file on the device (e.g. from camera/gallery)
+    if (!cleanPath.startsWith('http://') &&
+        !cleanPath.startsWith('https://') &&
+        !cleanPath.startsWith('assets/')) {
+      try {
+        final localFile = File(cleanPath);
+        if (localFile.existsSync()) {
+          return _wrapBorder(
+            Image.file(
+              localFile,
+              width: width,
+              height: height,
+              fit: fit,
+              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+            ),
+          );
+        }
+      } catch (_) {}
+    }
+
+    // 2. Relative backend URL (e.g. /uploads/properties/abc.jpg)
     String effectiveUrl = cleanPath;
-    if (cleanPath.startsWith('/')) {
+    if (cleanPath.startsWith('/uploads/') || cleanPath.startsWith('uploads/')) {
+      final normalized = cleanPath.startsWith('/') ? cleanPath : '/$cleanPath';
+      effectiveUrl = '${ApiService.serverRootUrl}$normalized';
+    } else if (cleanPath.startsWith('/') &&
+        !cleanPath.startsWith('/data') &&
+        !cleanPath.startsWith('/storage') &&
+        !cleanPath.startsWith('/var') &&
+        !cleanPath.startsWith('/private')) {
       effectiveUrl = '${ApiService.serverRootUrl}$cleanPath';
     }
 
-    // 2. Network URL (HTTP / HTTPS)
+    // 3. Network URL (HTTP / HTTPS)
     if (effectiveUrl.startsWith('http://') || effectiveUrl.startsWith('https://')) {
       imageWidget = Image.network(
         effectiveUrl,

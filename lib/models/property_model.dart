@@ -55,8 +55,9 @@ class Property {
     if (images.isNotEmpty && images.first.trim().isNotEmpty) {
       final img = images.first.trim();
       if (img.startsWith('http://') || img.startsWith('https://')) return img;
-      if (img.startsWith('/')) {
-        return 'https://property-hub-backend-j0ea.onrender.com$img';
+      if (img.startsWith('/uploads/') || img.startsWith('uploads/')) {
+        final rel = img.startsWith('/') ? img : '/$img';
+        return 'https://property-hub-backend-j0ea.onrender.com$rel';
       }
       return img;
     }
