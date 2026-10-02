@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/api_service.dart';
@@ -313,27 +314,139 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   }
 
   Future<void> _pickDocument(String type) async {
-    try {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-      if (picked != null) {
-        setState(() {
-          if (type == 'deed') {
-            _deedDocPath = picked.path;
-          } else if (type == 'tax') {
-            _taxReceiptPath = picked.path;
-          } else if (type == 'id') {
-            _govIdPath = picked.path;
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick document: $e')),
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select Ownership Document Source',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Upload official papers (PDF or Photo) to receive 100% Verified badge',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFDC2626)),
+                  ),
+                  title: Text(
+                    'Upload PDF Document',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    'Registry Deed, Electricity Bill (.pdf)',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      final result = await FilePicker.platform.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: ['pdf', 'doc', 'docx'],
+                      );
+                      if (result != null && result.files.single.path != null) {
+                        setState(() {
+                          final p = result.files.single.path!;
+                          if (type == 'deed') _deedDocPath = p;
+                          else if (type == 'tax') _taxReceiptPath = p;
+                          else if (type == 'id') _govIdPath = p;
+                        });
+                      }
+                    } catch (e) {
+                      debugPrint('File picker error: $e');
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB)),
+                  ),
+                  title: Text(
+                    'Choose Photo from Gallery',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    'JPG, PNG photo of original paper',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                    if (picked != null) {
+                      setState(() {
+                        if (type == 'deed') _deedDocPath = picked.path;
+                        else if (type == 'tax') _taxReceiptPath = picked.path;
+                        else if (type == 'id') _govIdPath = picked.path;
+                      });
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3E8FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF7C3AED)),
+                  ),
+                  title: Text(
+                    'Take Photo with Camera',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    'Capture document right now',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+                    if (picked != null) {
+                      setState(() {
+                        if (type == 'deed') _deedDocPath = picked.path;
+                        else if (type == 'tax') _taxReceiptPath = picked.path;
+                        else if (type == 'id') _govIdPath = picked.path;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
         );
-      }
-    }
+      },
+    );
   }
 
   @override
@@ -1593,24 +1706,28 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
 
         _buildDocUploadTile(
           doc1Title,
-          _deedDocPath != null,
+          _deedDocPath,
           () => _pickDocument('deed'),
         ),
         _buildDocUploadTile(
           'Electricity Bill / Municipality Receipt',
-          _taxReceiptPath != null,
+          _taxReceiptPath,
           () => _pickDocument('tax'),
         ),
         _buildDocUploadTile(
           'Owner Aadhaar / Government ID Card',
-          _govIdPath != null,
+          _govIdPath,
           () => _pickDocument('id'),
         ),
       ],
     );
   }
 
-  Widget _buildDocUploadTile(String title, bool isUploaded, VoidCallback onTap) {
+  Widget _buildDocUploadTile(String title, String? filePath, VoidCallback onTap) {
+    final bool isUploaded = filePath != null && filePath.isNotEmpty;
+    final bool isPdf = isUploaded && filePath.toLowerCase().endsWith('.pdf');
+    final String fileName = isUploaded ? filePath.split('/').last.split('\\').last : '';
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -1625,23 +1742,53 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         ),
         child: Row(
           children: [
-            Icon(
-              isUploaded ? Icons.check_circle : Icons.upload_file_rounded,
-              color: isUploaded ? AppTheme.verifiedGreen : AppTheme.primary,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isUploaded 
+                  ? (isPdf ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7)) 
+                  : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isUploaded 
+                  ? (isPdf ? Icons.picture_as_pdf_rounded : Icons.check_circle_rounded) 
+                  : Icons.upload_file_rounded,
+                color: isUploaded 
+                  ? (isPdf ? const Color(0xFFDC2626) : AppTheme.verifiedGreen) 
+                  : AppTheme.primary,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: AppTheme.textPrimary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  if (isUploaded)
+                    Text(
+                      fileName,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: isPdf ? const Color(0xFFDC2626) : AppTheme.verifiedGreen,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
               ),
             ),
             Text(
-              isUploaded ? 'Attached ✓' : 'Upload',
+              isUploaded ? (isPdf ? 'PDF Attached ✓' : 'Attached ✓') : 'Upload',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,

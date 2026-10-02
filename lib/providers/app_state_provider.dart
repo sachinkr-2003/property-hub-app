@@ -140,16 +140,21 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  /// Uploads and updates the user's profile image
+  /// Uploads and updates the user's profile image.
+  /// Falls back to storing the local path if server upload fails,
+  /// so the image at least shows on the current device.
   Future<String?> uploadProfileImage(String imagePath) async {
     if (_currentUser == null) return null;
-    final uploadedUrl = await ApiService.uploadSingleFile(imagePath);
-    if (uploadedUrl != null) {
-      await updateUserProfile(profileImage: uploadedUrl);
-      return uploadedUrl;
-    } else {
-      throw Exception('Failed to upload image');
-    }
+    try {
+      final uploadedUrl = await ApiService.uploadSingleFile(imagePath);
+      if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+        await updateUserProfile(profileImage: uploadedUrl);
+        return uploadedUrl;
+      }
+    } catch (_) {}
+    // Fallback: persist local path so avatar shows immediately on device
+    await updateUserProfile(profileImage: imagePath);
+    return imagePath;
   }
 
   void logout() {

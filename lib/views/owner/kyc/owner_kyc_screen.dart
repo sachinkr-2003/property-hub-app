@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../providers/app_state_provider.dart';
@@ -50,25 +51,82 @@ class OwnerKycScreen extends StatelessWidget {
             }
 
             Future<void> pickDoc(String docType) async {
-              try {
-                final picker = ImagePicker();
-                final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-                if (picked != null) {
-                  setModalState(() {
-                    if (docType == 'aadhaar') {
-                      pickedAadhaarPath = picked.path;
-                    } else {
-                      pickedPanPath = picked.path;
-                    }
-                  });
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to pick document: $e')),
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (pickerCtx) {
+                  return SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Upload ${docType == 'aadhaar' ? 'Aadhaar' : 'PAN'} Document',
+                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 16),
+                          ),
+                          const SizedBox(height: 12),
+                          ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(8)),
+                              child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFDC2626)),
+                            ),
+                            title: Text('Upload PDF File', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14)),
+                            subtitle: Text('e-Aadhaar or PAN copy (.pdf)', style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                            onTap: () async {
+                              Navigator.pop(pickerCtx);
+                              try {
+                                final result = await FilePicker.platform.pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: ['pdf', 'doc', 'docx'],
+                                );
+                                if (result != null && result.files.single.path != null) {
+                                  setModalState(() {
+                                    if (docType == 'aadhaar') {
+                                      pickedAadhaarPath = result.files.single.path!;
+                                    } else {
+                                      pickedPanPath = result.files.single.path!;
+                                    }
+                                  });
+                                }
+                              } catch (e) {
+                                debugPrint('PDF pick error: $e');
+                              }
+                            },
+                          ),
+                          ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
+                              child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB)),
+                            ),
+                            title: Text('Choose Photo from Gallery', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14)),
+                            subtitle: Text('Card photo (.jpg, .png)', style: GoogleFonts.plusJakartaSans(fontSize: 11)),
+                            onTap: () async {
+                              Navigator.pop(pickerCtx);
+                              final picker = ImagePicker();
+                              final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                              if (picked != null) {
+                                setModalState(() {
+                                  if (docType == 'aadhaar') {
+                                    pickedAadhaarPath = picked.path;
+                                  } else {
+                                    pickedPanPath = picked.path;
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   );
-                }
-              }
+                },
+              );
             }
 
             return Padding(

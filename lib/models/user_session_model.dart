@@ -90,7 +90,6 @@ class UserSession {
         (m) => '${m[1]} ${m[2]}',
       )}';
 
-  /// Whether profile image is a real URL
-  bool get hasProfileImage =>
-      profileImage.isNotEmpty && (profileImage.startsWith('http') || profileImage.startsWith('data:image') || profileImage.startsWith('/'));
+  /// Whether profile image is set (local file path, data URI, or remote URL)
+  bool get hasProfileImage => profileImage.isNotEmpty;
 }

@@ -416,9 +416,40 @@ class UserHomeScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 12),
+                      // Row 2: Office, Plot, Roommate, Services
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          _buildCategoryItem(
+                            context,
+                            icon: Icons.business_outlined,
+                            label: 'Office',
+                            color: const Color(0xFF0891B2),
+                            onTap: () {
+                              state.setSelectedCategory('Office');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PropertyListScreen(initialFilter: 'Office'),
+                                ),
+                              );
+                            },
+                          ),
+                          _buildCategoryItem(
+                            context,
+                            icon: Icons.landscape_outlined,
+                            label: 'Plot',
+                            color: const Color(0xFF65A30D),
+                            onTap: () {
+                              state.setSelectedCategory('Plot');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PropertyListScreen(initialFilter: 'Plot'),
+                                ),
+                              );
+                            },
+                          ),
                           _buildCategoryItem(
                             context,
                             icon: Icons.group_outlined,
@@ -447,6 +478,13 @@ class UserHomeScreen extends StatelessWidget {
                               );
                             },
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Row 3: Used Items, Sell
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
                           _buildCategoryItem(
                             context,
                             icon: Icons.shopping_bag_outlined,
@@ -461,6 +499,7 @@ class UserHomeScreen extends StatelessWidget {
                               );
                             },
                           ),
+                          const SizedBox(width: 12),
                           _buildCategoryItem(
                             context,
                             icon: Icons.sell_outlined,

@@ -17,7 +17,7 @@ class PropertyListScreen extends StatefulWidget {
 }
 
 class _PropertyListScreenState extends State<PropertyListScreen> {
-  final List<String> _filters = ['All', 'Rent', 'Buy', 'PG', 'Room', '1 BHK', '2 BHK', '3 BHK'];
+  final List<String> _filters = ['All', 'Rent', 'Buy', 'PG', 'Room', 'Office', 'Plot', '1 BHK', '2 BHK', '3 BHK'];
   late String _activeFilter;
   String _searchQuery = '';
   double _maxPrice = 100000;
@@ -52,6 +52,8 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
       if (_activeFilter == 'Buy' && p.listingType != 'Buy') return false;
       if (_activeFilter == 'PG' && p.type.toLowerCase() != 'pg') return false;
       if (_activeFilter == 'Room' && p.type.toLowerCase() != 'room') return false;
+      if (_activeFilter == 'Office' && p.type.toLowerCase() != 'office') return false;
+      if (_activeFilter == 'Plot' && p.type.toLowerCase() != 'plot') return false;
       if (_activeFilter == '1 BHK' && p.bhk != 1) return false;
       if (_activeFilter == '2 BHK' && p.bhk != 2) return false;
       if (_activeFilter == '3 BHK' && p.bhk != 3) return false;
