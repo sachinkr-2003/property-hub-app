@@ -291,7 +291,7 @@ class _PropertyCompareScreenState extends State<PropertyCompareScreen> {
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
               child: AppImage(
-                path: property.images[0],
+                path: property.firstImageUrl,
                 height: 100,
                 width: double.infinity,
                 fit: BoxFit.cover,

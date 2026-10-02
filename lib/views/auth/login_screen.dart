@@ -281,6 +281,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+
+              const SizedBox(height: 20),
+
+              // ── Quick Guest Explore ─────────────────────────────────────────
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {
+                    final state = Provider.of<AppStateProvider>(context, listen: false);
+                    state.login();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: AppTheme.primary),
+                  label: Text(
+                    'Explore App as Guest',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

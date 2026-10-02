@@ -234,9 +234,7 @@ class MyPropertiesScreen extends StatelessWidget {
                                 top: Radius.circular(16),
                               ),
                               child: AppImage(
-                                path: prop.images.isNotEmpty
-                                    ? prop.images[0]
-                                    : 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
+                                path: prop.firstImageUrl,
                                 height: 140,
                                 width: double.infinity,
                                 fit: BoxFit.cover,

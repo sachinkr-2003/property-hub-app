@@ -51,6 +51,28 @@ class Property {
     this.status = 'Active',
   });
 
+  String get firstImageUrl {
+    if (images.isNotEmpty && images.first.trim().isNotEmpty) {
+      final img = images.first.trim();
+      if (img.startsWith('http://') || img.startsWith('https://')) return img;
+      if (img.startsWith('/')) {
+        return 'https://property-hub-backend-j0ea.onrender.com$img';
+      }
+      return img;
+    }
+    return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80';
+  }
+
+  List<String> get safeImages {
+    final valid = images.where((img) => img.trim().isNotEmpty).toList();
+    if (valid.isEmpty) {
+      return const [
+        'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80'
+      ];
+    }
+    return valid;
+  }
+
   String get formattedPrice {
     if (listingType == 'Buy') {
       if (price >= 10000000) {

@@ -266,8 +266,19 @@ class AppStateProvider extends ChangeNotifier {
   List<Property> get favoriteProperties =>
       _properties.where((p) => p.isFavorite).toList();
 
-  List<Property> get ownerProperties =>
-      _properties.where((p) => p.ownerName == 'Rajesh Kumar' || p.ownerName == 'Vikramaditya Roy').toList();
+  List<Property> get ownerProperties {
+    final currentName = userName.trim().toLowerCase();
+    final currentPhone = userPhone.replaceAll(RegExp(r'\s+'), '');
+    final myProps = _properties.where((p) {
+      final pOwner = p.ownerName.trim().toLowerCase();
+      final pPhone = p.ownerPhone.replaceAll(RegExp(r'\s+'), '');
+      final isMineByName = currentName.isNotEmpty && currentName != 'user' && pOwner == currentName;
+      final isMineByPhone = currentPhone.isNotEmpty && pPhone.isNotEmpty && pPhone.contains(currentPhone);
+      final isDemoOwner = (pOwner == 'rajesh kumar' || pOwner == 'vikramaditya roy');
+      return isMineByName || isMineByPhone || isDemoOwner;
+    }).toList();
+    return myProps.isNotEmpty ? myProps : _properties.take(2).toList();
+  }
 
   void toggleFavorite(String propertyId) {
     final index = _properties.indexWhere((p) => p.id == propertyId);

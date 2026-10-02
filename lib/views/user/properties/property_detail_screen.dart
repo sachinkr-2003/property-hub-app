@@ -112,11 +112,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               background: Stack(
                 children: [
                   PageView.builder(
-                    itemCount: p.images.length,
+                    itemCount: p.safeImages.length,
                     onPageChanged: (i) => setState(() => _currentImageIndex = i),
                     itemBuilder: (context, index) {
                       return AppImage(
-                        path: p.images[index],
+                        path: p.safeImages[index],
                         fit: BoxFit.cover,
                         width: double.infinity,
                       );
@@ -130,7 +130,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(
-                        p.images.length,
+                        p.safeImages.length,
                         (index) => Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           width: _currentImageIndex == index ? 20 : 6,
@@ -1004,7 +1004,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             propertyId: widget.property.id,
                             propertyTitle: widget.property.title,
                             propertyAddress: widget.property.address,
-                            propertyImage: widget.property.images[0],
+                            propertyImage: widget.property.firstImageUrl,
                             ownerName: widget.property.ownerName,
                             ownerPhone: widget.property.ownerPhone,
                             visitDate: selectedDay,

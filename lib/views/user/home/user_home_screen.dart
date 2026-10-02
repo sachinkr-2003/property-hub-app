@@ -47,11 +47,15 @@ class UserHomeScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: AppTheme.primary, width: 2),
-                          image: const DecorationImage(
-                            image: NetworkImage(
-                              'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-                            ),
+                        ),
+                        child: ClipOval(
+                          child: AppImage(
+                            path: state.userProfileImage.isNotEmpty
+                                ? state.userProfileImage
+                                : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
                             fit: BoxFit.cover,
+                            width: 46,
+                            height: 46,
                           ),
                         ),
                       ),
@@ -62,7 +66,7 @@ class UserHomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hello, Sachin 👋',
+                              'Hello, ${state.userName} 👋',
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
@@ -1077,9 +1081,7 @@ class UserHomeScreen extends StatelessWidget {
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   child: AppImage(
-                    path: property.images.isNotEmpty
-                        ? property.images[0]
-                        : 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
+                    path: property.firstImageUrl,
                     height: 140,
                     width: double.infinity,
                     fit: BoxFit.cover,

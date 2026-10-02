@@ -495,7 +495,7 @@ class UsedItemsScreen extends StatelessWidget {
                               category: selectedCategory,
                               imageUrl: finalImage,
                               location: locationController.text.isNotEmpty ? locationController.text : 'Indira Nagar, Lucknow',
-                              sellerName: 'Sachin (You)',
+                              sellerName: '${state.userName} (You)',
                               sellerPhone: state.userPhone.isNotEmpty ? state.userPhone : '+91 98765 43210',
                               description: 'Clean and good condition',
                               postedAt: DateTime.now(),

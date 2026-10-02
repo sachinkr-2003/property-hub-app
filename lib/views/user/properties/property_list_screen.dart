@@ -246,7 +246,7 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   child: AppImage(
-                    path: property.images[0],
+                    path: property.firstImageUrl,
                     height: 180,
                     width: double.infinity,
                     fit: BoxFit.cover,

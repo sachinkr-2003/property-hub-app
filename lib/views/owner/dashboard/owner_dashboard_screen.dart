@@ -38,7 +38,7 @@ class OwnerDashboardScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Rajesh Kumar (Owner)',
+                        '${state.userName} (Owner)',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,

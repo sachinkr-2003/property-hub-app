@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class AppImage extends StatelessWidget {
   final String path;
@@ -17,53 +18,108 @@ class AppImage extends StatelessWidget {
     this.borderRadius,
   });
 
+  static const String defaultFallback =
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80';
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: width,
+      height: height,
+      color: const Color(0xFFF1F5F9),
+      child: Center(
+        child: Icon(
+          Icons.home_work_outlined,
+          size: (width != null && width! < 60) ? 20 : 32,
+          color: const Color(0xFF94A3B8),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget imageWidget;
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      imageWidget = Image.network(
-        path,
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (context, error, stackTrace) => Container(
-          width: width,
-          height: height,
-          color: const Color(0xFFE2E8F0),
-          child: const Center(
-            child: Icon(
-              Icons.image_not_supported_outlined,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-      );
-    } else {
-      imageWidget = Image.file(
-        File(path),
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (context, error, stackTrace) => Container(
-          width: width,
-          height: height,
-          color: const Color(0xFFE2E8F0),
-          child: const Center(
-            child: Icon(
-              Icons.broken_image_outlined,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-      );
+    final cleanPath = path.trim();
+
+    if (cleanPath.isEmpty) {
+      return _wrapBorder(_buildPlaceholder());
     }
 
+    Widget imageWidget;
+
+    // 1. Relative backend URL (e.g. /uploads/properties/abc.jpg)
+    String effectiveUrl = cleanPath;
+    if (cleanPath.startsWith('/')) {
+      effectiveUrl = '${ApiService.serverRootUrl}$cleanPath';
+    }
+
+    // 2. Network URL (HTTP / HTTPS)
+    if (effectiveUrl.startsWith('http://') || effectiveUrl.startsWith('https://')) {
+      imageWidget = Image.network(
+        effectiveUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            width: width,
+            height: height,
+            color: const Color(0xFFF8FAFC),
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF6366F1),
+                ),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+      );
+    }
+    // 3. Asset Image
+    else if (effectiveUrl.startsWith('assets/')) {
+      imageWidget = Image.asset(
+        effectiveUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+      );
+    }
+    // 4. Local File
+    else {
+      try {
+        final file = File(effectiveUrl);
+        if (file.existsSync()) {
+          imageWidget = Image.file(
+            file,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+          );
+        } else {
+          imageWidget = _buildPlaceholder();
+        }
+      } catch (_) {
+        imageWidget = _buildPlaceholder();
+      }
+    }
+
+    return _wrapBorder(imageWidget);
+  }
+
+  Widget _wrapBorder(Widget child) {
     if (borderRadius != null) {
       return ClipRRect(
         borderRadius: borderRadius!,
-        child: imageWidget,
+        child: child,
       );
     }
-    return imageWidget;
+    return child;
   }
 }

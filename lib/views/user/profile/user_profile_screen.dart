@@ -487,7 +487,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             },
                             leading: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: AppImage(path: p.images[0], width: 55, height: 55, fit: BoxFit.cover),
+                              child: AppImage(path: p.firstImageUrl, width: 55, height: 55, fit: BoxFit.cover),
                             ),
                             title: Text(p.title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)),
                             subtitle: Text(p.formattedPrice, style: GoogleFonts.plusJakartaSans(color: AppTheme.primary, fontWeight: FontWeight.w700)),
