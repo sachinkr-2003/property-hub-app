@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -684,11 +686,23 @@ class UsedItemsScreen extends StatelessWidget {
                         onPressed: () async {
                           final price = double.tryParse(priceController.text) ?? 1500;
 
-                          // Upload image to backend if picked
-                          String finalImage = 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80';
+                          // Upload image to backend if picked (no random Unsplash fallback)
+                          String finalImage = '';
                           if (pickedImagePaths.isNotEmpty) {
                             final uploaded = await ApiService.uploadSingleFile(pickedImagePaths.first);
-                            finalImage = uploaded ?? pickedImagePaths.first;
+                            if (uploaded != null && uploaded.isNotEmpty) {
+                              finalImage = uploaded;
+                            } else {
+                              try {
+                                final bytes = await File(pickedImagePaths.first).readAsBytes();
+                                final ext = pickedImagePaths.first.split('.').last.toLowerCase();
+                                final mime = (ext == 'png') ? 'image/png' : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+                                final base64Str = base64Encode(bytes);
+                                finalImage = 'data:$mime;base64,$base64Str';
+                              } catch (_) {
+                                finalImage = pickedImagePaths.first;
+                              }
+                            }
                           }
 
                           state.addUsedItem(

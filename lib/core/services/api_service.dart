@@ -326,6 +326,22 @@ class ApiService {
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
+    // Base64 Data URI must never be prefixed with serverRootUrl
+    if (trimmed.startsWith('data:')) {
+      return trimmed;
+    }
+    // Asset paths
+    if (trimmed.startsWith('assets/')) {
+      return trimmed;
+    }
+    // Local device file paths
+    if (trimmed.startsWith('/data') ||
+        trimmed.startsWith('/storage') ||
+        trimmed.startsWith('/var') ||
+        trimmed.startsWith('/private') ||
+        trimmed.contains(':\\')) {
+      return trimmed;
+    }
     if (trimmed.startsWith('/')) {
       return '$serverRootUrl$trimmed';
     }
@@ -369,7 +385,7 @@ class ApiService {
         contentType: _getMediaType(filePath),
       ));
 
-      final streamed = await request.send().timeout(const Duration(seconds: 15));
+      final streamed = await request.send().timeout(const Duration(seconds: 45));
       final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -377,6 +393,8 @@ class ApiService {
         if (decoded['success'] == true && decoded['data'] != null) {
           return resolveMediaUrl(decoded['data']['url']?.toString());
         }
+      } else {
+        debugPrint('[ApiService] uploadSingleFile failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] uploadSingleFile error: $e');
@@ -404,7 +422,7 @@ class ApiService {
         return filePaths;
       }
 
-      final streamed = await request.send().timeout(const Duration(seconds: 25));
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
       final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -414,6 +432,8 @@ class ApiService {
               .map((url) => resolveMediaUrl(url?.toString()))
               .toList();
         }
+      } else {
+        debugPrint('[ApiService] uploadPropertyImages failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] uploadPropertyImages error: $e');
@@ -444,7 +464,7 @@ class ApiService {
 
       if (request.files.isEmpty) return result;
 
-      final streamed = await request.send().timeout(const Duration(seconds: 20));
+      final streamed = await request.send().timeout(const Duration(seconds: 45));
       final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -453,6 +473,8 @@ class ApiService {
           result['aadhaarUrl'] = resolveMediaUrl(decoded['data']['aadhaarUrl']?.toString());
           result['panUrl'] = resolveMediaUrl(decoded['data']['panUrl']?.toString());
         }
+      } else {
+        debugPrint('[ApiService] uploadKycDocs failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] uploadKycDocs error: $e');
@@ -472,7 +494,7 @@ class ApiService {
         contentType: _getMediaType(deedPath),
       ));
 
-      final streamed = await request.send().timeout(const Duration(seconds: 20));
+      final streamed = await request.send().timeout(const Duration(seconds: 45));
       final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -480,6 +502,8 @@ class ApiService {
         if (decoded['success'] == true && decoded['data'] != null) {
           return resolveMediaUrl(decoded['data']['registryUrl']?.toString());
         }
+      } else {
+        debugPrint('[ApiService] uploadDeedDoc failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] uploadDeedDoc error: $e');
@@ -500,7 +524,7 @@ class ApiService {
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final uri = Uri.parse('$baseUrl/properties').replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 6));
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
@@ -525,13 +549,15 @@ class ApiService {
         uri,
         headers: _headers,
         body: json.encode(propertyData),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
         if (decoded['success'] == true && decoded['data'] != null) {
           return Property.fromJson(decoded['data'] as Map<String, dynamic>);
         }
+      } else {
+        debugPrint('[ApiService] createProperty failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] createProperty warning: $e');
@@ -780,6 +806,10 @@ class ApiService {
     required String aadhaarNumber,
     required String panNumber,
     required String registryDetails,
+    String? aadhaarUrl,
+    String? panUrl,
+    String? registryUrl,
+    String? role,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/kyc/submit');
@@ -790,13 +820,21 @@ class ApiService {
           'name': ownerName,
           'mobile': mobile,
           'email': email,
-          'aadhaar': aadhaarNumber,
-          'pan': panNumber,
-          'registry': registryDetails,
+          'aadhaarNumber': aadhaarNumber,
+          'panNumber': panNumber,
+          'aadhaarUrl': aadhaarUrl ?? '',
+          'panUrl': panUrl ?? '',
+          'registryUrl': registryUrl ?? '',
+          'role': role ?? 'Direct Owner',
         }),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 45));
 
-      return response.statusCode == 200 || response.statusCode == 201;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        debugPrint('[ApiService] submitKyc failed (${response.statusCode}): ${response.body}');
+        return false;
+      }
     } catch (e) {
       debugPrint('[ApiService] submitKyc warning: $e');
       return false;

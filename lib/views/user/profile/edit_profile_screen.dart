@@ -262,7 +262,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         email: _emailController.text.trim(),
         city: _cityController.text.trim(),
         locality: _localityController.text.trim(),
-        profileImage: finalImageUrl,
+        profileImage: finalImageUrl ?? (state.userProfileImage.isNotEmpty ? state.userProfileImage : null),
       );
 
       if (mounted) {
@@ -384,50 +384,57 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          Container(
-                            width: 104,
-                            height: 104,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppTheme.primary, width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withOpacity(0.18),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: _selectedImagePath != null
-                                  ? Image.file(
-                                      File(_selectedImagePath!),
-                                      width: 104,
-                                      height: 104,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : (state.currentUser?.hasProfileImage == true
-                                      ? AppImage(
-                                          path: state.userProfileImage,
-                                          width: 104,
-                                          height: 104,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Container(
-                                          color: AppTheme.primaryLight,
-                                          child: Center(
-                                            child: Text(
-                                              state.userName.isNotEmpty
-                                                  ? state.userName[0].toUpperCase()
-                                                  : 'U',
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontSize: 38,
-                                                fontWeight: FontWeight.w800,
-                                                color: AppTheme.primary,
+                          GestureDetector(
+                            onTap: _showImagePickerModal,
+                            child: Container(
+                              width: 104,
+                              height: 104,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppTheme.primary, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.primary.withOpacity(0.18),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: _selectedImagePath != null
+                                    ? Image.file(
+                                        File(_selectedImagePath!),
+                                        width: 104,
+                                        height: 104,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : (state.currentUser?.hasProfileImage == true
+                                        ? AppImage(
+                                            path: state.userProfileImage,
+                                            width: 104,
+                                            height: 104,
+                                            fit: BoxFit.cover,
+                                            isAvatar: true,
+                                            initials: state.userName.isNotEmpty
+                                                ? state.userName[0].toUpperCase()
+                                                : 'U',
+                                          )
+                                        : Container(
+                                            color: AppTheme.primaryLight,
+                                            child: Center(
+                                              child: Text(
+                                                state.userName.isNotEmpty
+                                                    ? state.userName[0].toUpperCase()
+                                                    : 'U',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 38,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: AppTheme.primary,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        )),
+                                          )),
+                              ),
                             ),
                           ),
                           Positioned(

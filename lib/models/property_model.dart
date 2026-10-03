@@ -23,6 +23,9 @@ class Property {
   final DateTime postedAt;
   bool isFavorite;
   String status; // Active, Pending Verification, Rented
+  final String deedDocUrl;
+  final String deedDocName;
+  final String deedStatus;
 
   Property({
     required this.id,
@@ -49,40 +52,27 @@ class Property {
     required this.postedAt,
     this.isFavorite = false,
     this.status = 'Active',
+    this.deedDocUrl = '',
+    this.deedDocName = 'Registry / Title Deed Document',
+    this.deedStatus = 'Pending Verification',
   });
 
   String get firstImageUrl {
     if (images.isNotEmpty && images.first.trim().isNotEmpty) {
       final img = images.first.trim();
       if (img.startsWith('http://') || img.startsWith('https://')) return img;
+      if (img.startsWith('data:')) return img;
       if (img.startsWith('/uploads/') || img.startsWith('uploads/')) {
         final rel = img.startsWith('/') ? img : '/$img';
         return 'https://property-hub-backend-j0ea.onrender.com$rel';
       }
       return img;
     }
-    // High-resolution architectural fallback based on property type
-    final t = type.toLowerCase();
-    if (t.contains('villa') || t.contains('house')) {
-      return 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=900&q=80';
-    } else if (t.contains('room') || t.contains('pg')) {
-      return 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80';
-    } else if (t.contains('office')) {
-      return 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=80';
-    } else if (t.contains('plot') || t.contains('land')) {
-      return 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80';
-    }
-    return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=900&q=80';
+    return '';
   }
 
   List<String> get safeImages {
-    final valid = images.where((img) => img.trim().isNotEmpty).toList();
-    if (valid.isEmpty) {
-      return const [
-        'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80'
-      ];
-    }
-    return valid;
+    return images.where((img) => img.trim().isNotEmpty).toList();
   }
 
   String get formattedPrice {
@@ -123,6 +113,9 @@ class Property {
       postedAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now() : DateTime.now(),
       isFavorite: false,
       status: json['status']?.toString() ?? 'Active',
+      deedDocUrl: json['deedDocUrl']?.toString() ?? '',
+      deedDocName: json['deedDocName']?.toString() ?? 'Registry / Title Deed Document',
+      deedStatus: json['deedStatus']?.toString() ?? 'Pending Verification',
     );
   }
 
@@ -150,6 +143,9 @@ class Property {
       'targetTenant': targetTenant,
       'description': description,
       'status': status,
+      'deedDocUrl': deedDocUrl,
+      'deedDocName': deedDocName,
+      'deedStatus': deedStatus,
     };
   }
 }

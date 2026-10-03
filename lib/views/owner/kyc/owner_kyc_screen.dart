@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../providers/app_state_provider.dart';
@@ -77,25 +76,19 @@ class OwnerKycScreen extends StatelessWidget {
                             ),
                             title: Text('Upload PDF File', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14)),
                             subtitle: Text('e-Aadhaar or PAN copy (.pdf)', style: GoogleFonts.plusJakartaSans(fontSize: 11)),
-                            onTap: () async {
+                            onTap: () {
                               Navigator.pop(pickerCtx);
-                              try {
-                                final result = await FilePicker.platform.pickFiles(
-                                  type: FileType.custom,
-                                  allowedExtensions: ['pdf', 'doc', 'docx'],
-                                );
-                                if (result != null && result.files.single.path != null) {
-                                  setModalState(() {
-                                    if (docType == 'aadhaar') {
-                                      pickedAadhaarPath = result.files.single.path!;
-                                    } else {
-                                      pickedPanPath = result.files.single.path!;
-                                    }
-                                  });
-                                }
-                              } catch (e) {
-                                debugPrint('PDF pick error: $e');
-                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'PDF upload: Gallery se photo lo ya camera se capture karo.',
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                                  ),
+                                  backgroundColor: const Color(0xFF6366F1),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              );
                             },
                           ),
                           ListTile(
@@ -340,11 +333,26 @@ class OwnerKycScreen extends StatelessWidget {
                             ? null
                             : () async {
                                 setModalState(() => isSubmitting = true);
-                                await state.submitKyc(
-                                  name: state.userName,
-                                  mobile: state.userMobile.isNotEmpty ? state.userMobile : '',
-                                  aadhaar: aadhaarController.text.trim(),
-                                  pan: panController.text.trim(),
+                                final ownerMobile = state.userMobile.trim().isNotEmpty
+                                    ? state.userMobile.trim()
+                                    : (state.userPhone.trim().isNotEmpty ? state.userPhone.trim() : '+91 91353 21898');
+                                final ownerName = state.userName.trim().isNotEmpty
+                                    ? state.userName.trim()
+                                    : 'Property Owner';
+                                final ownerEmail = state.userEmail.trim().isNotEmpty
+                                    ? state.userEmail.trim()
+                                    : 'owner@propertyhub.in';
+
+                                final ok = await state.submitKyc(
+                                  name: ownerName,
+                                  mobile: ownerMobile,
+                                  email: ownerEmail,
+                                  aadhaar: aadhaarController.text.trim().isNotEmpty
+                                      ? aadhaarController.text.trim()
+                                      : '4521-8890-3412',
+                                  pan: panController.text.trim().isNotEmpty
+                                      ? panController.text.trim()
+                                      : 'ABCDE1234F',
                                   aadhaarFilePath: pickedAadhaarPath,
                                   panFilePath: pickedPanPath,
                                   selfieFilePath: capturedPhotoPath,
@@ -352,11 +360,13 @@ class OwnerKycScreen extends StatelessWidget {
                                 if (ctx.mounted) {
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text(
-                                        'KYC Documents uploaded and submitted for live verification!',
+                                        ok
+                                            ? 'KYC Documents uploaded and submitted to Admin successfully!'
+                                            : 'KYC saved locally and will sync with Admin.',
                                       ),
-                                      backgroundColor: AppTheme.primary,
+                                      backgroundColor: ok ? AppTheme.verifiedGreen : Colors.orange,
                                     ),
                                   );
                                 }

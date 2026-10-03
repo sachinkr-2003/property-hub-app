@@ -97,6 +97,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     width: 64,
                                     height: 64,
                                     fit: BoxFit.cover,
+                                    isAvatar: true,
+                                    initials: state.userName.isNotEmpty
+                                        ? state.userName[0].toUpperCase()
+                                        : 'U',
                                   )
                                 : Container(
                                     color: AppTheme.primaryLight,

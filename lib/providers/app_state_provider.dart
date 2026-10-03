@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
 import '../core/services/api_service.dart';
@@ -66,6 +68,7 @@ class AppStateProvider extends ChangeNotifier {
   String get userName => _currentUser?.name ?? 'User';
   String get userPhone => _currentUser?.formattedPhone ?? '';
   String get userMobile => _currentUser?.mobile ?? '';
+  String get userEmail => _currentUser?.email ?? '';
   String get userRole => _currentUser?.role ?? 'Tenant';
   String get userProfileImage => _currentUser?.profileImage ?? '';
   String get userToken => _currentUser?.token ?? '';
@@ -320,12 +323,12 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  void addProperty(Property property) {
+  Future<Property?> addProperty(Property property) async {
     _properties.insert(0, property);
     notifyListeners();
 
-    // Asynchronously save to MongoDB in background
-    ApiService.createProperty(property.toJson()).then((created) {
+    try {
+      final created = await ApiService.createProperty(property.toJson());
       if (created != null) {
         debugPrint('[AppStateProvider] Successfully created property in MongoDB: ${created.id}');
         final idx = _properties.indexWhere((p) => p.id == property.id || p.id == created.id);
@@ -333,8 +336,12 @@ class AppStateProvider extends ChangeNotifier {
           _properties[idx] = created;
           notifyListeners();
         }
+        return created;
       }
-    });
+    } catch (e) {
+      debugPrint('[AppStateProvider] createProperty error: $e');
+    }
+    return property;
   }
 
   void togglePropertyStatus(String propertyId) {
@@ -847,11 +854,36 @@ class AppStateProvider extends ChangeNotifier {
       );
       if (kycUrls['aadhaarUrl'] != null) aadhaarDocUrl = kycUrls['aadhaarUrl'];
       if (kycUrls['panUrl'] != null) panDocUrl = kycUrls['panUrl'];
+
+      // Fallback: convert local files to Base64 data URI if multipart upload failed
+      if (aadhaarDocUrl == null && aadhaarFilePath != null && aadhaarFilePath.isNotEmpty) {
+        try {
+          final bytes = await File(aadhaarFilePath).readAsBytes();
+          final ext = aadhaarFilePath.split('.').last.toLowerCase();
+          final mime = (ext == 'pdf') ? 'application/pdf' : 'image/jpeg';
+          aadhaarDocUrl = 'data:$mime;base64,${base64Encode(bytes)}';
+        } catch (_) {}
+      }
+      if (panDocUrl == null && panFilePath != null && panFilePath.isNotEmpty) {
+        try {
+          final bytes = await File(panFilePath).readAsBytes();
+          final ext = panFilePath.split('.').last.toLowerCase();
+          final mime = (ext == 'pdf') ? 'application/pdf' : 'image/jpeg';
+          panDocUrl = 'data:$mime;base64,${base64Encode(bytes)}';
+        } catch (_) {}
+      }
     }
 
     if (selfieFilePath != null && selfieFilePath.isNotEmpty) {
       final selfieUrl = await ApiService.uploadSingleFile(selfieFilePath);
-      if (selfieUrl != null) selfiePhotoUrl = selfieUrl;
+      if (selfieUrl != null) {
+        selfiePhotoUrl = selfieUrl;
+      } else {
+        try {
+          final bytes = await File(selfieFilePath).readAsBytes();
+          selfiePhotoUrl = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        } catch (_) {}
+      }
     }
 
     final success = await ApiService.submitKyc(
@@ -861,6 +893,10 @@ class AppStateProvider extends ChangeNotifier {
       aadhaarNumber: aadhaar,
       panNumber: pan,
       registryDetails: registry,
+      aadhaarUrl: aadhaarDocUrl,
+      panUrl: panDocUrl,
+      registryUrl: selfiePhotoUrl,
+      role: 'Direct Owner',
     );
 
     debugPrint('[AppStateProvider] KYC submitted to backend: $success');

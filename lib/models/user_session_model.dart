@@ -1,3 +1,5 @@
+import 'dart:io';
+
 /// UserSession — stores authenticated user data after successful OTP login.
 /// This is the single source of truth for the currently logged-in user.
 class UserSession {
@@ -91,5 +93,20 @@ class UserSession {
       )}';
 
   /// Whether profile image is set (local file path, data URI, or remote URL)
-  bool get hasProfileImage => profileImage.isNotEmpty;
+  bool get hasProfileImage {
+    final p = profileImage.trim();
+    if (p.isEmpty) return false;
+    // If it's a local file path, verify it actually exists on disk
+    if (!p.startsWith('http://') &&
+        !p.startsWith('https://') &&
+        !p.startsWith('data:') &&
+        !p.startsWith('assets/')) {
+      try {
+        return File(p).existsSync();
+      } catch (_) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

@@ -1,8 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/api_service.dart';
@@ -361,24 +361,19 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     'Registry Deed, Electricity Bill (.pdf)',
                     style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
                   ),
-                  onTap: () async {
+                  onTap: () {
                     Navigator.pop(ctx);
-                    try {
-                      final result = await FilePicker.platform.pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: ['pdf', 'doc', 'docx'],
-                      );
-                      if (result != null && result.files.single.path != null) {
-                        setState(() {
-                          final p = result.files.single.path!;
-                          if (type == 'deed') _deedDocPath = p;
-                          else if (type == 'tax') _taxReceiptPath = p;
-                          else if (type == 'id') _govIdPath = p;
-                        });
-                      }
-                    } catch (e) {
-                      debugPrint('File picker error: $e');
-                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'PDF upload: Camera se ya Gallery se photo lo — PDF support jald aayega!',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12),
+                        ),
+                        backgroundColor: const Color(0xFF6366F1),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    );
                   },
                 ),
                 ListTile(
@@ -460,6 +455,16 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   }
 
   void _nextStep() {
+    // Step 4 is photos (_currentStep == 3)
+    if (_currentStep == 3 && _pickedImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kripya property ki kam se kam 1 photo select karein.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     if (_currentStep < 5) {
       setState(() => _currentStep++);
     } else {
@@ -468,6 +473,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   }
 
   Future<void> _submitProperty() async {
+    if (_pickedImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kripya property ki kam se kam 1 photo select karein.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      setState(() => _currentStep = 3);
+      return;
+    }
+
     setState(() => _isUploadingData = true);
     final state = Provider.of<AppStateProvider>(context, listen: false);
 
@@ -478,19 +494,35 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       if (uploadedUrls.isNotEmpty) {
         finalImages = uploadedUrls;
       } else {
-        finalImages = uploadPaths;
+        // Fallback: convert user's REAL picked photos to Base64 Data URIs
+        for (final file in _pickedImages) {
+          try {
+            final bytes = await File(file.path).readAsBytes();
+            final ext = file.path.split('.').last.toLowerCase();
+            final mime = (ext == 'png') ? 'image/png' : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+            final base64Str = base64Encode(bytes);
+            finalImages.add('data:$mime;base64,$base64Str');
+          } catch (_) {
+            finalImages.add(file.path);
+          }
+        }
       }
     }
 
-    if (finalImages.isEmpty) {
-      finalImages = [
-        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
-      ];
-    }
-
+    String uploadedDeedUrl = '';
     if (_deedDocPath != null && _deedDocPath!.isNotEmpty) {
-      await ApiService.uploadDeedDoc(_deedDocPath!);
+      final dUrl = await ApiService.uploadDeedDoc(_deedDocPath!);
+      if (dUrl != null && dUrl.isNotEmpty) {
+        uploadedDeedUrl = dUrl;
+      } else {
+        try {
+          final bytes = await File(_deedDocPath!).readAsBytes();
+          final ext = _deedDocPath!.split('.').last.toLowerCase();
+          final mime = (ext == 'pdf') ? 'application/pdf' : 'image/jpeg';
+          final base64Str = base64Encode(bytes);
+          uploadedDeedUrl = 'data:$mime;base64,$base64Str';
+        } catch (_) {}
+      }
     }
 
     String summaryDescription = '';
@@ -508,6 +540,11 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       summaryDescription = '$_plotType on $_plotRoadWidth with $_plotBoundary. Total area ${_areaController.text} sqft at ${_localityController.text}.';
     }
 
+    final ownerPhone = state.userMobile.trim().isNotEmpty 
+        ? state.userMobile.trim() 
+        : (state.userPhone.trim().isNotEmpty ? state.userPhone.trim() : '+91 91353 21898');
+    final ownerName = state.userName.trim().isNotEmpty ? state.userName.trim() : 'Property Owner';
+
     final newProp = Property(
       id: 'prop-${DateTime.now().millisecondsSinceEpoch}',
       title: _titleController.text.trim(),
@@ -522,17 +559,20 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       city: 'Lucknow',
       images: finalImages,
       isVerified: false, // Strict admin verification required first
-      ownerName: state.userName.isNotEmpty ? state.userName : 'Property Owner',
-      ownerPhone: state.userPhone.isNotEmpty ? state.userPhone : '+91 98765 43210',
+      ownerName: ownerName,
+      ownerPhone: ownerPhone,
       ownerRole: 'Direct Owner',
       amenities: _selectedAmenities.toList(),
       furnishing: _furnishing,
       description: summaryDescription,
       postedAt: DateTime.now(),
       status: 'Pending Verification',
+      deedDocUrl: uploadedDeedUrl,
+      deedDocName: _deedDocPath != null ? _deedDocPath!.split(Platform.pathSeparator).last : 'Registry / Title Deed Document',
+      deedStatus: uploadedDeedUrl.isNotEmpty ? 'Pending Verification' : 'Pending Verification',
     );
 
-    state.addProperty(newProp);
+    await state.addProperty(newProp);
     if (!mounted) return;
     setState(() => _isUploadingData = false);
 

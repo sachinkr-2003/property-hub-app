@@ -9,6 +9,10 @@ class AppImage extends StatelessWidget {
   final double? height;
   final BoxFit fit;
   final BorderRadius? borderRadius;
+  final IconData? placeholderIcon;
+  final Widget? placeholder;
+  final bool isAvatar;
+  final String? initials;
 
   const AppImage({
     super.key,
@@ -17,19 +21,58 @@ class AppImage extends StatelessWidget {
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
+    this.placeholderIcon,
+    this.placeholder,
+    this.isAvatar = false,
+    this.initials,
   });
 
   static const String defaultFallback =
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80';
 
   Widget _buildPlaceholder() {
+    if (placeholder != null) return placeholder!;
+
+    if (isAvatar) {
+      if (initials != null && initials!.trim().isNotEmpty) {
+        final letter = initials!.trim().substring(0, 1).toUpperCase();
+        return Container(
+          width: width,
+          height: height,
+          color: const Color(0xFFE8F5E9),
+          child: Center(
+            child: Text(
+              letter,
+              style: TextStyle(
+                fontSize: (width != null) ? (width! * 0.42).clamp(14, 42) : 24,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF0F766E),
+              ),
+            ),
+          ),
+        );
+      }
+      return Container(
+        width: width,
+        height: height,
+        color: const Color(0xFFE8F5E9),
+        child: Center(
+          child: Icon(
+            placeholderIcon ?? Icons.person_rounded,
+            size: (width != null && width! < 60) ? 22 : 38,
+            color: const Color(0xFF0F766E),
+          ),
+        ),
+      );
+    }
+
     return Container(
       width: width,
       height: height,
       color: const Color(0xFFF1F5F9),
       child: Center(
         child: Icon(
-          Icons.home_work_outlined,
+          placeholderIcon ?? Icons.home_work_outlined,
           size: (width != null && width! < 60) ? 20 : 32,
           color: const Color(0xFF94A3B8),
         ),
@@ -45,12 +88,12 @@ class AppImage extends StatelessWidget {
       return _wrapBorder(_buildPlaceholder());
     }
 
-    // 0. Base64 Data URI support (e.g. data:image/jpeg;base64,...)
-    if (cleanPath.startsWith('data:image')) {
+    // 0. Base64 Data URI support (e.g. data:image/jpeg;base64,... or data:;base64,...)
+    if (cleanPath.startsWith('data:')) {
       try {
         final commaIdx = cleanPath.indexOf(',');
         if (commaIdx != -1) {
-          final base64Data = cleanPath.substring(commaIdx + 1);
+          final base64Data = cleanPath.substring(commaIdx + 1).trim();
           final bytes = base64Decode(base64Data);
           return _wrapBorder(
             Image.memory(

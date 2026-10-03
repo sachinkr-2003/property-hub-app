@@ -50,12 +50,14 @@ class UserHomeScreen extends StatelessWidget {
                         ),
                         child: ClipOval(
                           child: AppImage(
-                            path: state.userProfileImage.isNotEmpty
-                                ? state.userProfileImage
-                                : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+                            path: state.userProfileImage,
                             fit: BoxFit.cover,
                             width: 46,
                             height: 46,
+                            isAvatar: true,
+                            initials: state.userName.isNotEmpty
+                                ? state.userName[0].toUpperCase()
+                                : 'U',
                           ),
                         ),
                       ),
