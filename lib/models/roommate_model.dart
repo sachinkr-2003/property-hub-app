@@ -62,10 +62,12 @@ class RoommateProfile {
   }
 
   Map<String, dynamic> toJson() {
+    final cleanBudget = double.tryParse(budgetRange.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 5000.0;
     return {
       'customId': id,
       'userName': name,
       'phone': phone,
+      'budget': cleanBudget,
       'gender': gender,
       'lookingFor': lookingFor,
       'targetLocality': preferredLocation,

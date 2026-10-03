@@ -6,6 +6,8 @@ class VisitBooking {
   final String propertyImage;
   final String ownerName;
   final String ownerPhone;
+  final String visitorName;
+  final String visitorPhone;
   final String visitDate;
   final String timeSlot;
   final String passCode;
@@ -20,6 +22,8 @@ class VisitBooking {
     required this.propertyImage,
     required this.ownerName,
     required this.ownerPhone,
+    this.visitorName = '',
+    this.visitorPhone = '',
     required this.visitDate,
     required this.timeSlot,
     required this.passCode,
@@ -44,6 +48,8 @@ class VisitBooking {
           'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80',
       ownerName: json['ownerName']?.toString() ?? 'Direct Owner',
       ownerPhone: json['ownerPhone']?.toString() ?? '+91 98765 00000',
+      visitorName: json['visitorName']?.toString() ?? '',
+      visitorPhone: json['visitorPhone']?.toString() ?? '',
       visitDate: json['slotDate']?.toString() ?? json['visitDate']?.toString() ?? 'Tomorrow',
       timeSlot: json['slotTime']?.toString() ?? json['timeSlot']?.toString() ?? 'Morning (10:00 AM - 1:00 PM)',
       passCode: json['passCode']?.toString() ?? 'PH-VIS-${DateTime.now().millisecond}',
@@ -60,6 +66,8 @@ class VisitBooking {
       'locality': propertyAddress,
       'ownerName': ownerName,
       'ownerPhone': ownerPhone,
+      'visitorName': visitorName.isNotEmpty ? visitorName : 'Property Seeker',
+      'visitorPhone': visitorPhone.isNotEmpty ? visitorPhone : (ownerPhone.isNotEmpty ? ownerPhone : '+91 91353 21898'),
       'slotDate': visitDate,
       'slotTime': timeSlot,
       'passCode': passCode,

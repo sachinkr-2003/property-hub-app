@@ -705,7 +705,7 @@ class UsedItemsScreen extends StatelessWidget {
                             }
                           }
 
-                          state.addUsedItem(
+                          await state.addUsedItem(
                             UsedItem(
                               id: 'item-${DateTime.now().millisecondsSinceEpoch}',
                               title: titleController.text.isNotEmpty ? titleController.text : 'Study Table',
@@ -714,7 +714,7 @@ class UsedItemsScreen extends StatelessWidget {
                               category: selectedCategory,
                               imageUrl: finalImage,
                               location: locationController.text.isNotEmpty ? locationController.text : 'Indira Nagar, Lucknow',
-                              sellerName: '${state.userName} (You)',
+                              sellerName: state.userName.isNotEmpty ? state.userName : 'Verified Seller',
                               sellerPhone: state.userPhone.isNotEmpty ? state.userPhone : '+91 98765 43210',
                               description: 'Clean and good condition',
                               postedAt: DateTime.now(),

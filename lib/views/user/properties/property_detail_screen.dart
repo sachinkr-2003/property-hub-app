@@ -1016,6 +1016,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             propertyImage: widget.property.firstImageUrl,
                             ownerName: widget.property.ownerName,
                             ownerPhone: widget.property.ownerPhone,
+                            visitorName: state.userName.isNotEmpty ? state.userName : 'Property Seeker',
+                            visitorPhone: state.userPhone.isNotEmpty ? state.userPhone : '+91 91353 21898',
                             visitDate: selectedDay,
                             timeSlot: selectedSlot,
                             passCode: passCode,

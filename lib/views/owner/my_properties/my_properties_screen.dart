@@ -741,9 +741,7 @@ class MyPropertiesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = Provider.of<AppStateProvider>(context);
-    final myProps = state.ownerProperties.isNotEmpty
-        ? state.ownerProperties
-        : state.properties;
+    final myProps = state.ownerProperties;
 
     return Scaffold(
       backgroundColor: AppTheme.background,

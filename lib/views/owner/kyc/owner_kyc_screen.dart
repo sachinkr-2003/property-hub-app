@@ -347,12 +347,8 @@ class OwnerKycScreen extends StatelessWidget {
                                   name: ownerName,
                                   mobile: ownerMobile,
                                   email: ownerEmail,
-                                  aadhaar: aadhaarController.text.trim().isNotEmpty
-                                      ? aadhaarController.text.trim()
-                                      : '4521-8890-3412',
-                                  pan: panController.text.trim().isNotEmpty
-                                      ? panController.text.trim()
-                                      : 'ABCDE1234F',
+                                  aadhaar: aadhaarController.text.trim(),
+                                  pan: panController.text.trim(),
                                   aadhaarFilePath: pickedAadhaarPath,
                                   panFilePath: pickedPanPath,
                                   selfieFilePath: capturedPhotoPath,

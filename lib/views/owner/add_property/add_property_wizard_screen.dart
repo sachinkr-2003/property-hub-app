@@ -248,9 +248,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     try {
       if (source == ImageSource.gallery) {
         final List<XFile> images = await picker.pickMultiImage(
-          maxWidth: 1600,
-          maxHeight: 1600,
-          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 70,
         );
         if (images.isNotEmpty) {
           setState(() {
@@ -260,9 +260,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       } else {
         final XFile? image = await picker.pickImage(
           source: ImageSource.camera,
-          maxWidth: 1600,
-          maxHeight: 1600,
-          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 70,
         );
         if (image != null) {
           setState(() {
@@ -396,12 +396,16 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   onTap: () async {
                     Navigator.pop(ctx);
                     final picker = ImagePicker();
-                    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
                     if (picked != null) {
                       setState(() {
-                        if (type == 'deed') _deedDocPath = picked.path;
-                        else if (type == 'tax') _taxReceiptPath = picked.path;
-                        else if (type == 'id') _govIdPath = picked.path;
+                        if (type == 'deed') {
+                          _deedDocPath = picked.path;
+                        } else if (type == 'tax') {
+                          _taxReceiptPath = picked.path;
+                        } else if (type == 'id') {
+                          _govIdPath = picked.path;
+                        }
                       });
                     }
                   },
@@ -426,12 +430,16 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   onTap: () async {
                     Navigator.pop(ctx);
                     final picker = ImagePicker();
-                    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+                    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
                     if (picked != null) {
                       setState(() {
-                        if (type == 'deed') _deedDocPath = picked.path;
-                        else if (type == 'tax') _taxReceiptPath = picked.path;
-                        else if (type == 'id') _govIdPath = picked.path;
+                        if (type == 'deed') {
+                          _deedDocPath = picked.path;
+                        } else if (type == 'tax') {
+                          _taxReceiptPath = picked.path;
+                        } else if (type == 'id') {
+                          _govIdPath = picked.path;
+                        }
                       });
                     }
                   },
@@ -494,14 +502,19 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       if (uploadedUrls.isNotEmpty) {
         finalImages = uploadedUrls;
       } else {
-        // Fallback: convert user's REAL picked photos to Base64 Data URIs
+        // Safe fallback: Limit to max 3 photos and under 1.5MB to prevent MongoDB 16MB BSON crash
+        int count = 0;
         for (final file in _pickedImages) {
+          if (count >= 3) break;
           try {
             final bytes = await File(file.path).readAsBytes();
-            final ext = file.path.split('.').last.toLowerCase();
-            final mime = (ext == 'png') ? 'image/png' : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
-            final base64Str = base64Encode(bytes);
-            finalImages.add('data:$mime;base64,$base64Str');
+            if (bytes.lengthInBytes <= 1.5 * 1024 * 1024) {
+              final ext = file.path.split('.').last.toLowerCase();
+              final mime = (ext == 'png') ? 'image/png' : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+              final base64Str = base64Encode(bytes);
+              finalImages.add('data:$mime;base64,$base64Str');
+              count++;
+            }
           } catch (_) {
             finalImages.add(file.path);
           }
@@ -572,9 +585,25 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       deedStatus: uploadedDeedUrl.isNotEmpty ? 'Pending Verification' : 'Pending Verification',
     );
 
-    await state.addProperty(newProp);
+    final created = await state.addProperty(newProp);
     if (!mounted) return;
     setState(() => _isUploadingData = false);
+
+    if (created == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Property listing submit nahi ho saki. Internet connection check karein ya dobara try karein.'),
+          backgroundColor: Colors.red.shade700,
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _submitProperty,
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
 
     showDialog(
       context: context,

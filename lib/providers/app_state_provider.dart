@@ -301,15 +301,18 @@ class AppStateProvider extends ChangeNotifier {
   List<Property> get ownerProperties {
     final currentName = userName.trim().toLowerCase();
     final currentPhone = userPhone.replaceAll(RegExp(r'\s+'), '');
-    final myProps = _properties.where((p) {
+    return _properties.where((p) {
       final pOwner = p.ownerName.trim().toLowerCase();
       final pPhone = p.ownerPhone.replaceAll(RegExp(r'\s+'), '');
-      final isMineByName = currentName.isNotEmpty && currentName != 'user' && pOwner == currentName;
-      final isMineByPhone = currentPhone.isNotEmpty && pPhone.isNotEmpty && pPhone.contains(currentPhone);
-      final isDemoOwner = (pOwner == 'rajesh kumar' || pOwner == 'vikramaditya roy');
-      return isMineByName || isMineByPhone || isDemoOwner;
+      final isMineByName = currentName.isNotEmpty &&
+          currentName != 'user' &&
+          currentName != 'property seeker' &&
+          pOwner == currentName;
+      final isMineByPhone = currentPhone.isNotEmpty &&
+          pPhone.isNotEmpty &&
+          (pPhone.contains(currentPhone) || currentPhone.contains(pPhone));
+      return isMineByName || isMineByPhone;
     }).toList();
-    return myProps.isNotEmpty ? myProps : _properties.take(2).toList();
   }
 
   void toggleFavorite(String propertyId) {
@@ -324,24 +327,18 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<Property?> addProperty(Property property) async {
-    _properties.insert(0, property);
-    notifyListeners();
-
     try {
       final created = await ApiService.createProperty(property.toJson());
       if (created != null) {
         debugPrint('[AppStateProvider] Successfully created property in MongoDB: ${created.id}');
-        final idx = _properties.indexWhere((p) => p.id == property.id || p.id == created.id);
-        if (idx != -1) {
-          _properties[idx] = created;
-          notifyListeners();
-        }
+        _properties.insert(0, created);
+        notifyListeners();
         return created;
       }
     } catch (e) {
       debugPrint('[AppStateProvider] createProperty error: $e');
     }
-    return property;
+    return null;
   }
 
   void togglePropertyStatus(String propertyId) {
@@ -451,15 +448,21 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  void addRoommate(RoommateProfile roommate) {
-    _roommates.insert(0, roommate);
-    notifyListeners();
-
-    ApiService.createRoommate(roommate.toJson()).then((created) {
+  Future<RoommateProfile?> addRoommate(RoommateProfile roommate) async {
+    try {
+      final created = await ApiService.createRoommate(roommate.toJson());
       if (created != null) {
         debugPrint('[AppStateProvider] Created roommate in MongoDB: ${created.id}');
+        _roommates.insert(0, created);
+        notifyListeners();
+        return created;
       }
-    });
+    } catch (e) {
+      debugPrint('[AppStateProvider] createRoommate error: $e');
+    }
+    _roommates.insert(0, roommate);
+    notifyListeners();
+    return null;
   }
 
   // Bachelor Services List with robust defaults
@@ -692,15 +695,21 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  void addUsedItem(UsedItem item) {
-    _usedItems.insert(0, item);
-    notifyListeners();
-
-    ApiService.createUsedItem(item.toJson()).then((created) {
+  Future<UsedItem?> addUsedItem(UsedItem item) async {
+    try {
+      final created = await ApiService.createUsedItem(item.toJson());
       if (created != null) {
         debugPrint('[AppStateProvider] Created used item in MongoDB: ${created.id}');
+        _usedItems.insert(0, created);
+        notifyListeners();
+        return created;
       }
-    });
+    } catch (e) {
+      debugPrint('[AppStateProvider] createUsedItem error: $e');
+    }
+    _usedItems.insert(0, item);
+    notifyListeners();
+    return null;
   }
 
   // Leads & Inquiries for Owner Mode
@@ -825,18 +834,20 @@ class AppStateProvider extends ChangeNotifier {
   bool isPhotoUploaded = false;
   String? aadhaarDocUrl;
   String? panDocUrl;
+  String? registryDocUrl;
   String? selfiePhotoUrl;
   String kycStatus = 'Unverified'; // Verified, Pending, Unverified
 
   Future<bool> submitKyc({
-    String name = 'Rajesh Kumar',
-    String mobile = '+91 98765 43210',
-    String email = 'rajesh.owner@propertyhub.in',
-    String aadhaar = '4521-8890-3412',
-    String pan = 'ABCDE1234F',
-    String registry = 'Indira Nagar Registry Deed',
+    String name = 'Property Owner',
+    String mobile = '',
+    String email = '',
+    String aadhaar = '',
+    String pan = '',
+    String registry = '',
     String? aadhaarFilePath,
     String? panFilePath,
+    String? registryFilePath,
     String? selfieFilePath,
   }) async {
     isAadhaarUploaded = true;
@@ -845,7 +856,7 @@ class AppStateProvider extends ChangeNotifier {
     kycStatus = 'Pending';
     notifyListeners();
 
-    // If local file paths are passed, upload them via multipart first
+    // 1. Upload Aadhaar & PAN
     if ((aadhaarFilePath != null && aadhaarFilePath.isNotEmpty) ||
         (panFilePath != null && panFilePath.isNotEmpty)) {
       final kycUrls = await ApiService.uploadKycDocs(
@@ -874,6 +885,15 @@ class AppStateProvider extends ChangeNotifier {
       }
     }
 
+    // 2. Upload Property Deed / Registry
+    if (registryFilePath != null && registryFilePath.isNotEmpty) {
+      final deedUrl = await ApiService.uploadDeedDoc(registryFilePath);
+      if (deedUrl != null && deedUrl.isNotEmpty) {
+        registryDocUrl = deedUrl;
+      }
+    }
+
+    // 3. Upload Owner Live Selfie / Photo
     if (selfieFilePath != null && selfieFilePath.isNotEmpty) {
       final selfieUrl = await ApiService.uploadSingleFile(selfieFilePath);
       if (selfieUrl != null) {
@@ -887,15 +907,16 @@ class AppStateProvider extends ChangeNotifier {
     }
 
     final success = await ApiService.submitKyc(
-      ownerName: name,
-      mobile: mobile,
-      email: email,
+      ownerName: name.isNotEmpty ? name : (userName.isNotEmpty ? userName : 'Property Owner'),
+      mobile: mobile.isNotEmpty ? mobile : (userMobile.isNotEmpty ? userMobile : userPhone),
+      email: email.isNotEmpty ? email : userEmail,
       aadhaarNumber: aadhaar,
       panNumber: pan,
       registryDetails: registry,
       aadhaarUrl: aadhaarDocUrl,
       panUrl: panDocUrl,
-      registryUrl: selfiePhotoUrl,
+      registryUrl: registryDocUrl,
+      selfieUrl: selfiePhotoUrl,
       role: 'Direct Owner',
     );
 
@@ -930,15 +951,21 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  void addVisitBooking(VisitBooking booking) {
-    _visitBookings.insert(0, booking);
-    notifyListeners();
-
-    ApiService.createVisit(booking.toJson()).then((created) {
+  Future<VisitBooking?> addVisitBooking(VisitBooking booking) async {
+    try {
+      final created = await ApiService.createVisit(booking.toJson());
       if (created != null) {
         debugPrint('[AppStateProvider] Created visit in MongoDB: ${created.id}');
+        _visitBookings.insert(0, created);
+        notifyListeners();
+        return created;
       }
-    });
+    } catch (e) {
+      debugPrint('[AppStateProvider] createVisit error: $e');
+    }
+    _visitBookings.insert(0, booking);
+    notifyListeners();
+    return null;
   }
 
   void cancelVisitBooking(String id) {

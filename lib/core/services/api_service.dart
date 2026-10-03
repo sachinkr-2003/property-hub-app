@@ -659,7 +659,7 @@ class ApiService {
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final uri = Uri.parse('$baseUrl/used-items').replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 6));
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 35));
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         if (decoded['success'] == true && decoded['data'] is List) {
@@ -682,13 +682,15 @@ class ApiService {
         uri,
         headers: _headers,
         body: json.encode(itemData),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
         if (decoded['success'] == true && decoded['data'] != null) {
           return UsedItem.fromJson(decoded['data'] as Map<String, dynamic>);
         }
+      } else {
+        debugPrint('[ApiService] createUsedItem failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] createUsedItem warning: $e');
@@ -708,7 +710,7 @@ class ApiService {
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final uri = Uri.parse('$baseUrl/roommates').replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 6));
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 35));
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         if (decoded['success'] == true && decoded['data'] is List) {
@@ -731,13 +733,15 @@ class ApiService {
         uri,
         headers: _headers,
         body: json.encode(roommateData),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
         if (decoded['success'] == true && decoded['data'] != null) {
           return RoommateProfile.fromJson(decoded['data'] as Map<String, dynamic>);
         }
+      } else {
+        debugPrint('[ApiService] createRoommate failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] createRoommate warning: $e');
@@ -757,7 +761,7 @@ class ApiService {
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final uri = Uri.parse('$baseUrl/visits').replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 6));
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 35));
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         if (decoded['success'] == true && decoded['data'] is List) {
@@ -780,13 +784,15 @@ class ApiService {
         uri,
         headers: _headers,
         body: json.encode(visitData),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body);
         if (decoded['success'] == true && decoded['data'] != null) {
           return VisitBooking.fromJson(decoded['data'] as Map<String, dynamic>);
         }
+      } else {
+        debugPrint('[ApiService] createVisit failed (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('[ApiService] createVisit warning: $e');
@@ -809,6 +815,7 @@ class ApiService {
     String? aadhaarUrl,
     String? panUrl,
     String? registryUrl,
+    String? selfieUrl,
     String? role,
   }) async {
     try {
@@ -825,6 +832,7 @@ class ApiService {
           'aadhaarUrl': aadhaarUrl ?? '',
           'panUrl': panUrl ?? '',
           'registryUrl': registryUrl ?? '',
+          'selfieUrl': selfieUrl ?? '',
           'role': role ?? 'Direct Owner',
         }),
       ).timeout(const Duration(seconds: 45));
