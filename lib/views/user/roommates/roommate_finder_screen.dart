@@ -327,6 +327,7 @@ class RoommateFinderScreen extends StatelessWidget {
                           label: Text(habit),
                           selected: isSelected,
                           selectedColor: AppTheme.primary,
+                          checkmarkColor: Colors.white,
                           labelStyle: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: isSelected
