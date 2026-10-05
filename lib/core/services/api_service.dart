@@ -590,7 +590,7 @@ class ApiService {
   /// Update property status (Active, Paused, etc.) in MongoDB
   static Future<bool> updatePropertyStatus(String id, String status) async {
     try {
-      final uri = Uri.parse('$baseUrl/properties/$id/status');
+      final uri = Uri.parse('$baseUrl/properties/$id');
       final response = await http.patch(
         uri,
         headers: _headers,
@@ -847,6 +847,24 @@ class ApiService {
       debugPrint('[ApiService] submitKyc warning: $e');
       return false;
     }
+  }
+
+  /// Fetch live Owner KYC status by mobile number from MongoDB
+  static Future<Map<String, dynamic>?> fetchKycStatus(String mobile) async {
+    try {
+      final clean = mobile.replaceAll(RegExp(r'\s+'), '');
+      final uri = Uri.parse('$baseUrl/kyc/status/$clean');
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded['success'] == true && decoded['data'] != null) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ApiService] fetchKycStatus warning: $e');
+    }
+    return null;
   }
 
   /// Phone Login & OTP Verification

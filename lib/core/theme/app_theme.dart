@@ -132,6 +132,7 @@ class AppTheme {
       ),
       chipTheme: const ChipThemeData(
         checkmarkColor: Colors.white,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
     );
   }

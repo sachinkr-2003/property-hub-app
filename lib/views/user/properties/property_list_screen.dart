@@ -160,6 +160,7 @@ class _PropertyListScreenState extends State<PropertyListScreen> {
                     },
                     selectedColor: AppTheme.primary,
                     checkmarkColor: Colors.white,
+                    iconTheme: const IconThemeData(color: Colors.white),
                     backgroundColor: Colors.white,
                     side: BorderSide(
                       color: isSelected ? AppTheme.primary : const Color(0xFFE2E8F0),

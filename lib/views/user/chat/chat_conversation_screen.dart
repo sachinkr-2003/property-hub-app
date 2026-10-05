@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/launcher_utils.dart';
+import '../../../core/services/socket_service.dart';
 import '../../../providers/app_state_provider.dart';
 
 class ChatConversationScreen extends StatefulWidget {
@@ -23,9 +24,30 @@ class ChatConversationScreen extends StatefulWidget {
 class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  String? _currentThreadId;
+  bool _isOtherTyping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SocketService.instance.addTypingListener(_handleTyping);
+  }
+
+  void _handleTyping(String threadId, String senderName, bool isTyping) {
+    if (threadId == _currentThreadId && mounted) {
+      setState(() {
+        _isOtherTyping = isTyping;
+      });
+      if (isTyping) _scrollToBottom();
+    }
+  }
 
   @override
   void dispose() {
+    if (_currentThreadId != null) {
+      SocketService.instance.leaveThread(_currentThreadId!);
+    }
+    SocketService.instance.removeTypingListener(_handleTyping);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -59,6 +81,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       participantName: widget.participantName,
       propertyTitle: widget.propertyTitle,
     );
+
+    if (_currentThreadId != thread.id) {
+      _currentThreadId = thread.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        SocketService.instance.joinThread(thread.id);
+      });
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -101,17 +130,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                       Container(
                         width: 7,
                         height: 7,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.verifiedGreen,
+                        decoration: BoxDecoration(
+                          color: _isOtherTyping ? AppTheme.primary : AppTheme.verifiedGreen,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Online • ${thread.participantRole}',
+                        _isOtherTyping ? 'typing...' : 'Online • ${thread.participantRole}',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
-                          color: AppTheme.textSecondary,
+                          color: _isOtherTyping ? AppTheme.primary : AppTheme.textSecondary,
+                          fontWeight: _isOtherTyping ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                     ],
@@ -255,6 +285,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         controller: _messageController,
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _sendMessage(state, thread.id),
+                        onChanged: (val) {
+                          if (_currentThreadId != null) {
+                            SocketService.instance.sendTyping(
+                              threadId: _currentThreadId!,
+                              senderName: state.userName,
+                              isTyping: val.trim().isNotEmpty,
+                            );
+                          }
+                        },
                         decoration: InputDecoration(
                           hintText: 'Type your message...',
                           border: InputBorder.none,
