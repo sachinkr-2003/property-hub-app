@@ -199,7 +199,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         ),
                         itemBuilder: (context, index) {
                           final chat = filteredChats[index];
-                          final timeStr = DateFormat('hh:mm a').format(chat.lastMessageTime);
+                          final timeStr = _formatChatListTime(chat.lastMessageTime);
 
                           return InkWell(
                             onTap: () {
@@ -400,5 +400,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       ),
     );
+  }
+
+  String _formatChatListTime(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final msgDate = DateTime(dt.year, dt.month, dt.day);
+    final diff = today.difference(msgDate).inDays;
+
+    if (diff == 0) {
+      return DateFormat('hh:mm a').format(dt);
+    } else if (diff == 1) {
+      return 'Yesterday';
+    } else if (diff < 7) {
+      return DateFormat('EEEE').format(dt);
+    } else {
+      return DateFormat('dd/MM/yy').format(dt);
+    }
   }
 }

@@ -152,6 +152,41 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     });
   }
 
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatDateSeparator(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final msgDate = DateTime(dt.year, dt.month, dt.day);
+    final diff = today.difference(msgDate).inDays;
+
+    if (diff == 0) {
+      return 'TODAY';
+    } else if (diff == 1) {
+      return 'YESTERDAY';
+    } else if (diff < 7) {
+      return DateFormat('EEEE').format(dt).toUpperCase();
+    } else {
+      return DateFormat('MMMM d, y').format(dt).toUpperCase();
+    }
+  }
+
+  String _formatLastSeen(DateTime dt, bool isOnline) {
+    if (isOnline) return 'online';
+    final now = DateTime.now();
+    final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+    final timeStr = DateFormat('hh:mm a').format(dt);
+    if (isToday) {
+      return 'last seen today at $timeStr';
+    } else if (now.difference(dt).inDays == 1) {
+      return 'last seen yesterday at $timeStr';
+    } else {
+      return 'last seen ${DateFormat('dd/MM/yy').format(dt)} at $timeStr';
+    }
+  }
+
   void _sendMessage(AppStateProvider state, String threadId, {String? textOverride}) {
     final text = textOverride ?? _messageController.text.trim();
     if (text.isNotEmpty) {
@@ -367,7 +402,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   Text(
                     _isOtherTyping
                         ? 'typing...'
-                        : (thread.isOnline ? 'online' : 'last seen today at 11:42 AM'),
+                        : _formatLastSeen(thread.lastMessageTime, thread.isOnline),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11.5,
                       color: _isOtherTyping
@@ -508,35 +543,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ),
                   ),
 
-                // Date Badge
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.92),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 2,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      'TODAY',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF54656F),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Messages List
+                // Messages List with Real-time Dynamic Date Separators
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
@@ -547,9 +554,49 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                       final isSender = msg.isSender;
                       final timeStr = DateFormat('hh:mm a').format(msg.timestamp);
 
-                      return Align(
-                        alignment:
-                            isSender ? Alignment.centerRight : Alignment.centerLeft,
+                      final showDateSeparator = index == 0 ||
+                          !_isSameDay(
+                            thread.messages[index - 1].timestamp,
+                            msg.timestamp,
+                          );
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showDateSeparator)
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.92),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  _formatDateSeparator(msg.timestamp),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF54656F),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Align(
+                            alignment: isSender
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 6),
                           constraints: BoxConstraints(
@@ -614,9 +661,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                             ],
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ],
+                  );
+                },
+              ),
                 ),
 
                 // Typing indicator bubble if other is typing
