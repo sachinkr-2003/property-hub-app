@@ -769,7 +769,101 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Chat Threads
-  final List<ChatThread> _chats = [];
+  final List<ChatThread> _chats = [
+    ChatThread(
+      id: 'chat-owner-sachin',
+      participantName: 'Sachin Kumar (Owner)',
+      participantRole: 'Direct Landlord',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      propertyOrItemTitle: 'Luxury 3 BHK Villa in Gomti Nagar',
+      lastMessage: 'Hi! Yes, registry deed is verified. You can visit tomorrow at 4:30 PM.',
+      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 8)),
+      unreadCount: 1,
+      isOnline: true,
+      messages: [
+        ChatMessage(
+          id: 'm1',
+          text: 'Hi Sachin ji, I am interested in your Luxury 3 BHK Villa in Gomti Nagar.',
+          isSender: true,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 25)),
+        ),
+        ChatMessage(
+          id: 'm2',
+          text: 'Namaste! Yes, the villa is available for family tenants with zero brokerage.',
+          isSender: false,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 18)),
+        ),
+        ChatMessage(
+          id: 'm3',
+          text: 'Is the rent negotiable? Can we schedule a site visit?',
+          isSender: true,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 12)),
+        ),
+        ChatMessage(
+          id: 'm4',
+          text: 'Hi! Yes, registry deed is verified. You can visit tomorrow at 4:30 PM.',
+          isSender: false,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 8)),
+        ),
+      ],
+    ),
+    ChatThread(
+      id: 'chat-tenant-priya',
+      participantName: 'Priya Sharma (Tenant)',
+      participantRole: 'Working Professional',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
+      propertyOrItemTitle: '2 BHK Modern Flat in Indira Nagar',
+      lastMessage: 'Sure, let us connect over WhatsApp call to confirm the move-in date.',
+      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 42)),
+      unreadCount: 0,
+      isOnline: true,
+      messages: [
+        ChatMessage(
+          id: 'p1',
+          text: 'Hello, is the 2 BHK Modern Flat in Indira Nagar still vacant?',
+          isSender: false,
+          timestamp: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+        ChatMessage(
+          id: 'p2',
+          text: 'Yes Priya ji, completely vacant with modular kitchen and 24/7 power backup.',
+          isSender: true,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 50)),
+        ),
+        ChatMessage(
+          id: 'p3',
+          text: 'Sure, let us connect over WhatsApp call to confirm the move-in date.',
+          isSender: false,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 42)),
+        ),
+      ],
+    ),
+    ChatThread(
+      id: 'chat-support-concierge',
+      participantName: 'Property Hub Concierge',
+      participantRole: 'Verified Help Desk',
+      avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+      propertyOrItemTitle: 'Zero Brokerage Guarantee',
+      lastMessage: 'Your owner deed verification is approved with green verified badge.',
+      lastMessageTime: DateTime.now().subtract(const Duration(hours: 2)),
+      unreadCount: 0,
+      isOnline: false,
+      messages: [
+        ChatMessage(
+          id: 'c1',
+          text: 'Welcome to Property Hub! Direct owner and tenant live chat is active with real-time socket delivery.',
+          isSender: false,
+          timestamp: DateTime.now().subtract(const Duration(hours: 3)),
+        ),
+        ChatMessage(
+          id: 'c2',
+          text: 'Your owner deed verification is approved with green verified badge.',
+          isSender: false,
+          timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+        ),
+      ],
+    ),
+  ];
 
   List<ChatThread> get chats => _chats;
 
