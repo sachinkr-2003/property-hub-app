@@ -35,29 +35,35 @@ class OwnerDashboardScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Good Morning,',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: AppTheme.textSecondary,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Good Morning,',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${state.userName} (Owner)',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary,
+                        Text(
+                          '${state.userName} (Owner)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Direct Live Chats Shortcut
+                      // Direct Live Chats Circular Icon Button
                       InkWell(
                         onTap: () {
                           Navigator.push(
@@ -66,32 +72,23 @@ class OwnerDashboardScreen extends StatelessWidget {
                           );
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.04),
                                 blurRadius: 4,
-                                offset: const Offset(0, 2),
+                                offset: const Offset(0, 1),
                               ),
                             ],
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: AppTheme.primary),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Chats',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ],
+                          child: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 18,
+                            color: AppTheme.primary,
                           ),
                         ),
                       ),
@@ -108,20 +105,21 @@ class OwnerDashboardScreen extends StatelessWidget {
                           );
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryLight,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.swap_horiz_rounded, size: 16, color: AppTheme.primary),
                               const SizedBox(width: 4),
                               Text(
                                 'User Mode',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   color: AppTheme.primary,
                                 ),
