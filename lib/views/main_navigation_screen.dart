@@ -16,7 +16,6 @@ import 'user/profile/user_profile_screen.dart';
 import 'owner/dashboard/owner_dashboard_screen.dart';
 import 'owner/my_properties/my_properties_screen.dart';
 import 'owner/leads/leads_screen.dart';
-import 'owner/analytics/analytics_screen.dart';
 import 'owner/add_property/add_property_wizard_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
