@@ -6,6 +6,8 @@ import '../../../providers/app_state_provider.dart';
 import '../add_property/add_property_wizard_screen.dart';
 import '../kyc/owner_kyc_screen.dart';
 import '../subscription/subscription_screen.dart';
+import '../analytics/analytics_screen.dart';
+import '../../user/chat/chat_screen.dart';
 import '../../user/visits/my_visits_screen.dart';
 
 class OwnerDashboardScreen extends StatelessWidget {
@@ -53,39 +55,82 @@ class OwnerDashboardScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // Switch back to User Mode Pill
-                  InkWell(
-                    onTap: () {
-                      state.toggleRole();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Switched back to Tenant / User Mode!'),
-                          backgroundColor: AppTheme.primary,
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryLight,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.swap_horiz_rounded, size: 16, color: AppTheme.primary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'User Mode',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primary,
-                            ),
+                  Row(
+                    children: [
+                      // Direct Live Chats Shortcut
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                              const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: AppTheme.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Chats',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      // Switch back to User Mode Pill
+                      InkWell(
+                        onTap: () {
+                          state.toggleRole();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Switched back to Tenant / User Mode!'),
+                              backgroundColor: AppTheme.primary,
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryLight,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.swap_horiz_rounded, size: 16, color: AppTheme.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                'User Mode',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -260,7 +305,61 @@ class OwnerDashboardScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Subscription Plans Button
+                  // Live Tenant Chats Button
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChatListScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.12),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.chat_bubble_rounded, color: Color(0xFF38BDF8), size: 28),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Tenant Chats',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              'Live Instant Inquiries',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: const Color(0xFF94A3B8),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  // Free Membership Button
                   Expanded(
                     child: InkWell(
                       onTap: () {
@@ -294,7 +393,52 @@ class OwnerDashboardScreen extends StatelessWidget {
                             Text(
                               '100% Free Forever',
                               style: GoogleFonts.plusJakartaSans(
-                                color: Color(0xFF059669),
+                                color: const Color(0xFF059669),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Listing Analytics Button
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AnalyticsScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.insights_rounded, color: Color(0xFF6366F1), size: 28),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Listing Analytics',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              'Views & Lead Metrics',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: const Color(0xFF6366F1),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),

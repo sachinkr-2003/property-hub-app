@@ -169,7 +169,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const OwnerDashboardScreen(),
       const MyPropertiesScreen(),
       const LeadsScreen(),
-      const AnalyticsScreen(),
+      const ChatListScreen(),
       const UserProfileScreen(),
     ];
 
@@ -225,8 +225,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 label: 'Leads',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.insights_rounded),
-                label: 'Analytics',
+                icon: Icon(Icons.chat_bubble_rounded),
+                label: 'Chat',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.person_rounded),
